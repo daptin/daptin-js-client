@@ -1,9 +1,14 @@
-import {ActionManager} from 'clients/actionmanager'
-import {AppConfig} from 'clients/appconfig'
+import {ActionManager} from "./clients/actionmanager"
+import {AppConfig} from './clients/appconfig'
 import {JsonApi} from 'devour-client'
-import {StatsManager} from 'clients/statsmanager'
-import {WorldManager} from 'clients/worldmanager'
+import {StatsManager} from './clients/statsmanager'
+import {WorldManager} from './clients/worldmanager'
 
+class LocalStorageTokenGetter {
+  getToken(): string {
+    return localStorage.getItem("token")
+  }
+}
 
 function DaptinClient(endpoint, debug) {
 
@@ -12,18 +17,15 @@ function DaptinClient(endpoint, debug) {
   const appConfig = new AppConfig(endpoint);
 
   const jsonApi = new JsonApi({
-    apiUrl: appConfig.apiRoot + '/api',
+    apiUrl: appConfig.getEndpoint() + '/api',
     pluralize: false,
     logger: debug
   });
 
-  that.getToken = function () {
-    return window.localStorage.getItem("token");
-  }
-
+  that.getToken = new LocalStorageTokenGetter();
   const actionManager = new ActionManager(appConfig, that.getToken);
-  const worldManager = new WorldManager(appConfig, jsonApi, actionManager)
-  const statsManager = new StatsManager(appConfig)
+  const worldManager = new WorldManager(appConfig, that.getToken, jsonApi, actionManager)
+  const statsManager = new StatsManager(appConfig, that.getToken)
 
 
   jsonApi.insertMiddlewareBefore("HEADER", {
@@ -42,5 +44,3 @@ function DaptinClient(endpoint, debug) {
 
 
 }
-
-module.exports = DaptinClient;

@@ -1,18 +1,23 @@
 import axios from "axios"
+import jwtDecode from 'jwt-decode'
+import {AppConfigProvider, TokenGetter} from "./interface";
 
-import jwtDecode from 'jwt-decode';
+export class ActionManager  {
 
-const ActionManager = function (appConfig, getToken) {
+  appConfig: AppConfigProvider;
+  tokenGetter: TokenGetter;
+  actionMap: object;
 
-  const that = this;
-  that.actionMap = {};
-
-  this.setActions = function (typeName, actions) {
-    that.actionMap[typeName] = actions;
+  constructor(appConfig, getToken) {
+    this.appConfig = appConfig;
+    this.tokenGetter = getToken;
+  }
+  setActions (typeName, actions) {
+    this.actionMap[typeName] = actions;
   };
 
 
-  this.base64ToArrayBuffer = function (base64) {
+  private static base64ToArrayBuffer (base64) {
     const binaryString = window.atob(base64);
     const binaryLen = binaryString.length;
     const bytes = new Uint8Array(binaryLen);
@@ -22,34 +27,22 @@ const ActionManager = function (appConfig, getToken) {
     return bytes;
   };
 
-  setTimeout(function () {
-    that.a = document.createElement("a");
-    document.body.appendChild(that.a);
-    that.a.style = "display: none";
-    return function (downloadData) {
-      const blob = new Blob([atob(downloadData.content)], {type: downloadData.contentType}),
-        url = window.URL.createObjectURL(blob);
-      that.a.href = url;
-      that.a.download = downloadData.name;
-      that.a.click();
-      window.URL.revokeObjectURL(url);
-    };
-  });
-
-  this.saveByteArray = function (downloadData) {
+  private static saveByteArray (downloadData) {
     const blob = new Blob([atob(downloadData.content)], {type: downloadData.contentType}),
       url = window.URL.createObjectURL(blob);
-    that.a.href = url;
-    that.a.download = downloadData.name;
-    that.a.click();
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = downloadData.name;
+    a.click();
     window.URL.revokeObjectURL(url);
   };
 
 
-  this.getGuestActions = function () {
+  getGuestActions () {
+    const that = this;
     return new Promise(function (resolve, reject) {
       axios({
-        url: appConfig.apiRoot + "/actions",
+        url: that.appConfig.apiRoot + "/actions",
         method: "GET"
       }).then(function (respo) {
         console.log("Guest actions list: ", respo);
@@ -61,15 +54,15 @@ const ActionManager = function (appConfig, getToken) {
     });
   };
 
-  this.doAction = function (type, actionName, data) {
+  doAction (type, actionName, data) {
     // console.log("invoke action", type, actionName, data);
     const that = this;
     return new Promise(function (resolve, reject) {
       axios({
-        url: appConfig.apiRoot + "/action/" + type + "/" + actionName,
+        url: that.appConfig.apiRoot + "/action/" + type + "/" + actionName,
         method: "POST",
         headers: {
-          "Authorization": "Bearer " + getToken()
+          "Authorization": "Bearer " + that.tokenGetter.getToken()
         },
         data: {
           attributes: data
@@ -95,7 +88,7 @@ const ActionManager = function (appConfig, getToken) {
               }
               break;
             case "client.file.download":
-              that.saveByteArray(data);
+              ActionManager.saveByteArray(data);
               break;
             case "client.redirect":
               (function (redirectAttrs) {
@@ -128,41 +121,35 @@ const ActionManager = function (appConfig, getToken) {
         }
       }, function (res) {
         console.log("action failed", res);
-        reject("Failed");
-        if (res.response.data.Message) {
-          Notification.error(res.response.data.Message)
-        } else {
-          Notification.error("I failed to " + window.titleCase(actionName))
-        }
+        reject(res.response.data);
       })
 
     })
 
   };
 
-  this.addAllActions = function (actions) {
+  addAllActions (actions) {
 
     for (let i = 0; i < actions.length; i++) {
       const action = actions[i];
       const onType = action["OnType"];
 
-      if (!that.actionMap[onType]) {
-        that.actionMap[onType] = {};
+      if (!this.actionMap[onType]) {
+        this.actionMap[onType] = {};
       }
 
-      that.actionMap[onType][action["Name"]] = action;
+      this.actionMap[onType][action["Name"]] = action;
     }
   };
 
-  this.getActions = function (typeName) {
-    return that.actionMap[typeName];
+  getActions (typeName) {
+    return this.actionMap[typeName];
   };
 
-  this.getActionModel = function (typeName, actionName) {
-    return that.actionMap[typeName][actionName];
+  getActionModel (typeName, actionName) {
+    return this.actionMap[typeName][actionName];
   };
 
-  return this;
 };
 
 export default ActionManager

@@ -1,9 +1,17 @@
-import axios from "axios"
+import axios, {AxiosResponse} from "axios"
+import {TokenGetter} from './interface'
+import AppConfig from "./appconfig";
 
-const StatsManager = function (appConfig) {
-  const that = this;
+export class StatsManager {
+  tokenGetter: TokenGetter;
+  appConfig: AppConfig;
 
-  that.queryToParams = function (statsRequest) {
+  constructor(appConfig, tokenGetter: TokenGetter) {
+    this.appConfig = appConfig;
+    this.tokenGetter = tokenGetter;
+  }
+
+  private static queryToParams(statsRequest) {
 
     const keys = Object.keys(statsRequest);
     const list = [];
@@ -28,16 +36,23 @@ const StatsManager = function (appConfig) {
 
   };
 
-  that.getStats = function (tableName, statsRequest) {
+  getStats(tableName, statsRequest) {
 
     console.log("create stats request", tableName, statsRequest)
-    return axios({
-      url: appConfig.apiRoot + "/stats/" + tableName + that.queryToParams(statsRequest),
-      headers: {
-        "Authorization": "Bearer " + getToken()
-      }
+    return new Promise(function (resolve, reject) {
+      return axios({
+        url: this.appConfig.getEndpoint() + "/stats/" + tableName + StatsManager.queryToParams(statsRequest),
+        headers: {
+          "Authorization": "Bearer " + this.tokenGetter.getToken()
+        },
+      }).then(function (response: AxiosResponse) {
+        resolve(response.data);
+      }, function (response: AxiosResponse) {
+        reject(response.data);
+      });
     })
-
   }
-};
-export default StatsManager
+}
+
+
+export default StatsManager;

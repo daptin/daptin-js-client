@@ -2,13 +2,16 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 var axios_1 = require("axios");
 var jwt_decode_1 = require("jwt-decode");
-var ActionManager = function (appConfig, getToken) {
-    var that = this;
-    that.actionMap = {};
-    this.setActions = function (typeName, actions) {
-        that.actionMap[typeName] = actions;
+var ActionManager = /** @class */ (function () {
+    function ActionManager(appConfig, getToken) {
+        this.appConfig = appConfig;
+        this.tokenGetter = getToken;
+    }
+    ActionManager.prototype.setActions = function (typeName, actions) {
+        this.actionMap[typeName] = actions;
     };
-    this.base64ToArrayBuffer = function (base64) {
+    ;
+    ActionManager.base64ToArrayBuffer = function (base64) {
         var binaryString = window.atob(base64);
         var binaryLen = binaryString.length;
         var bytes = new Uint8Array(binaryLen);
@@ -17,29 +20,21 @@ var ActionManager = function (appConfig, getToken) {
         }
         return bytes;
     };
-    setTimeout(function () {
-        that.a = document.createElement("a");
-        document.body.appendChild(that.a);
-        that.a.style = "display: none";
-        return function (downloadData) {
-            var blob = new Blob([atob(downloadData.content)], { type: downloadData.contentType }), url = window.URL.createObjectURL(blob);
-            that.a.href = url;
-            that.a.download = downloadData.name;
-            that.a.click();
-            window.URL.revokeObjectURL(url);
-        };
-    });
-    this.saveByteArray = function (downloadData) {
+    ;
+    ActionManager.saveByteArray = function (downloadData) {
         var blob = new Blob([atob(downloadData.content)], { type: downloadData.contentType }), url = window.URL.createObjectURL(blob);
-        that.a.href = url;
-        that.a.download = downloadData.name;
-        that.a.click();
+        var a = document.createElement("a");
+        a.href = url;
+        a.download = downloadData.name;
+        a.click();
         window.URL.revokeObjectURL(url);
     };
-    this.getGuestActions = function () {
+    ;
+    ActionManager.prototype.getGuestActions = function () {
+        var that = this;
         return new Promise(function (resolve, reject) {
             axios_1.default({
-                url: appConfig.apiRoot + "/actions",
+                url: that.appConfig.apiRoot + "/actions",
                 method: "GET"
             }).then(function (respo) {
                 console.log("Guest actions list: ", respo);
@@ -50,15 +45,16 @@ var ActionManager = function (appConfig, getToken) {
             });
         });
     };
-    this.doAction = function (type, actionName, data) {
+    ;
+    ActionManager.prototype.doAction = function (type, actionName, data) {
         // console.log("invoke action", type, actionName, data);
         var that = this;
         return new Promise(function (resolve, reject) {
             axios_1.default({
-                url: appConfig.apiRoot + "/action/" + type + "/" + actionName,
+                url: that.appConfig.apiRoot + "/action/" + type + "/" + actionName,
                 method: "POST",
                 headers: {
-                    "Authorization": "Bearer " + getToken()
+                    "Authorization": "Bearer " + that.tokenGetter.getToken()
                 },
                 data: {
                     attributes: data
@@ -83,7 +79,7 @@ var ActionManager = function (appConfig, getToken) {
                             }
                             break;
                         case "client.file.download":
-                            that.saveByteArray(data_1);
+                            ActionManager.saveByteArray(data_1);
                             break;
                         case "client.redirect":
                             (function (redirectAttrs) {
@@ -109,32 +105,32 @@ var ActionManager = function (appConfig, getToken) {
                 }
             }, function (res) {
                 console.log("action failed", res);
-                reject("Failed");
-                if (res.response.data.Message) {
-                    Notification.error(res.response.data.Message);
-                }
-                else {
-                    Notification.error("I failed to " + window.titleCase(actionName));
-                }
+                reject(res.response.data);
             });
         });
     };
-    this.addAllActions = function (actions) {
+    ;
+    ActionManager.prototype.addAllActions = function (actions) {
         for (var i = 0; i < actions.length; i++) {
             var action = actions[i];
             var onType = action["OnType"];
-            if (!that.actionMap[onType]) {
-                that.actionMap[onType] = {};
+            if (!this.actionMap[onType]) {
+                this.actionMap[onType] = {};
             }
-            that.actionMap[onType][action["Name"]] = action;
+            this.actionMap[onType][action["Name"]] = action;
         }
     };
-    this.getActions = function (typeName) {
-        return that.actionMap[typeName];
+    ;
+    ActionManager.prototype.getActions = function (typeName) {
+        return this.actionMap[typeName];
     };
-    this.getActionModel = function (typeName, actionName) {
-        return that.actionMap[typeName][actionName];
+    ;
+    ActionManager.prototype.getActionModel = function (typeName, actionName) {
+        return this.actionMap[typeName][actionName];
     };
-    return this;
-};
+    ;
+    return ActionManager;
+}());
+exports.ActionManager = ActionManager;
+;
 exports.default = ActionManager;

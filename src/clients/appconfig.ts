@@ -1,26 +1,23 @@
-const AppConfig = function (endpoint) {
+import {InMemoryLocalStorage, LocalStorage} from "./interface";
 
-  endpoint = endpoint || window.location.host;
+export interface BrowserLocation {
+  host: string;
+  apiRoot: string;
+}
 
-  const that = this;
+export class AppConfig {
 
-  that.location = {
-    host: endpoint,
-    apiRoot: window.location.protocol + "//" + endpoint
-  };
+  endpoint: string;
+  localStorage: LocalStorage;
 
-  that.data = {};
+  constructor(endpoint: string) {
+    this.endpoint = window.location.protocol + "//" + endpoint;
+    this.localStorage = new InMemoryLocalStorage();
+  }
 
-  that.localStorage = {
-    getItem: function (key) {
-      return that.data[key]
-    },
-    setItem: function (key, item) {
-      that.data[key] = item;
-    }
-  };
-
-  return that;
-};
+  getEndpoint(): string {
+    return this.endpoint;
+  }
+}
 
 export default AppConfig

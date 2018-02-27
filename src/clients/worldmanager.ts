@@ -1,112 +1,170 @@
 /**
  * Created by artpar on 6/7/17.
  */
-import axios from "axios"
-
-const WorldManager = function (appconfig, jsonApi, actionManager) {
-  const that = this;
-  that.columnKeysCache = {};
+import axios, {AxiosResponse} from "axios"
+import {AppConfigProvider, TokenGetter} from "./interface";
+import ActionManager from "./actionmanager";
 
 
-  that.stateMachines = {};
-  that.stateMachineEnabled = {};
-  that.streams = {};
+export class WorldManager {
+  columnKeysCache: {};
+  stateMachines: {};
+  stateMachineEnabled: {};
+  streams: {};
+  appConfig: AppConfigProvider;
+  jsonApi: any;
+  actionManager: ActionManager;
+  columnTypes: any;
+  worlds: any;
+  systemActions: any;
+  modelLoader: (string, any) => void;
+  tokenGetter: TokenGetter;
+
+  constructor(appConfig: AppConfigProvider, tokenGetter: TokenGetter, jsonApi: any, actionManager: ActionManager) {
+    this.appConfig = appConfig;
+    this.jsonApi = jsonApi;
+    this.actionManager = actionManager;
+    this.tokenGetter = tokenGetter;
+    this.init()
+  }
+
+  init() {
+    const that = this;
+
+    that.columnTypes = [];
+
+    axios(this.appConfig.getEndpoint() + "/meta?query=column_types", {
+      headers: {
+        "Authorization": "Bearer " + that.tokenGetter.getToken()
+      }
+    }).then(function (r: AxiosResponse<string>) {
+      if (r.status === 200) {
+        that.columnTypes = r.data;
+      } else {
+        console.log("failed to get column types")
+      }
+    })
+
+    const logoutHandler = ";";
+
+    that.modelLoader = that.getColumnKeysWithErrorHandleWithThisBuilder(logoutHandler);
+
+    let worlds = [];
+
+    let systemActions = [];
 
 
-  that.getStateMachinesForType = function (typeName) {
+    this.jsonApi.define("image.png|jpg|jpeg|gif|tiff", {
+      "__type": "value",
+      "contents": "value",
+      "name": "value",
+      "reference_id": "value",
+      "src": "value",
+      "type": "value"
+    });
+
+  }
+
+
+  getStateMachinesForType(typeName) {
+    const that = this;
     return new Promise(function (resolve, reject) {
       resolve(that.stateMachines[typeName]);
     });
   };
 
-  that.startObjectTrack = function (objType, objRefId, stateMachineRefId) {
+  startObjectTrack(objType, objRefId, stateMachineRefId) {
+    const that = this;
 
-    return axios({
-      url: appconfig.apiRoot + "/track/start/" + stateMachineRefId,
-      method: "POST",
-      data: {
-        typeName: objType,
-        referenceId: objRefId
-      },
-      headers: {
-        "Authorization": "Bearer " + getToken()
-      }
+    return new Promise(function (resolve, reject) {
+      axios({
+        url: this.appConfig.getEndpoint() + "/track/start/" + stateMachineRefId,
+        method: "POST",
+        data: {
+          typeName: objType,
+          referenceId: objRefId
+        },
+        headers: {
+          "Authorization": "Bearer " + this.tokenGetter.getToken()
+        }
+      }).then(function (response: AxiosResponse) {
+        resolve(response.data);
+      }, function (response: AxiosResponse) {
+        reject(response.data);
+      })
     })
   };
 
-  that.trackObjectEvent = function (typeName, stateMachineRefId, eventName) {
-    console.log("change object track", getToken())
-    return axios({
-      url: appconfig.apiRoot + "/track/event/" + typeName + "/" + stateMachineRefId + "/" + eventName,
-      method: "POST",
-      headers: {
-        "Authorization": "Bearer " + getToken()
-      }
+  trackObjectEvent(typeName, stateMachineRefId, eventName) {
+    const that = this;
+    console.log("change object track", this.tokenGetter.getToken())
+    return new Promise(function (resolve, reject) {
+      axios({
+        url: this.appConfig.getEndpoint() + "/track/event/" + typeName + "/" + stateMachineRefId + "/" + eventName,
+        method: "POST",
+        headers: {
+          "Authorization": "Bearer " + this.tokenGetter.getToken()
+        }
+      }).then(function (response: AxiosResponse) {
+        resolve(response.data);
+      }, function (response: AxiosResponse) {
+        reject(response.data);
+      })
     })
   };
 
-  that.getColumnKeys = function (typeName, callback) {
+  getColumnKeys(typeName, callback) {
+    const that = this;
     // console.log("get column keys for ", typeName);
     if (that.columnKeysCache[typeName]) {
       callback(that.columnKeysCache[typeName]);
       return
     }
 
-    axios(appconfig.apiRoot + '/jsmodel/' + typeName + ".js", {
+    axios(this.appConfig.getEndpoint() + '/jsmodel/' + typeName + ".js", {
       headers: {
-        "Authorization": "Bearer " + getToken()
+        "Authorization": "Bearer " + this.tokenGetter.getToken()
       },
-    }).then(function (r) {
-      if (r.status === 200) {
-        r = r.data;
+    }).then(function (response: AxiosResponse) {
+      if (response.status === 200) {
+        const data = response.data;
         console.log("Loaded Model inside :", typeName)
-        if (r.Actions.length > 0) {
-          console.log("Register actions", typeName, r.Actions,)
-          actionManager.addAllActions(r.Actions);
+        if (data.Actions.length > 0) {
+          console.log("Register actions", typeName, data.Actions,)
+          that.actionManager.addAllActions(data.Actions);
         }
-        that.stateMachines[typeName] = r.StateMachines;
-        that.stateMachineEnabled[typeName] = r.IsStateMachineEnabled;
-        that.columnKeysCache[typeName] = r;
-        callback(r);
+        that.stateMachines[typeName] = data.StateMachines;
+        that.stateMachineEnabled[typeName] = data.IsStateMachineEnabled;
+        that.columnKeysCache[typeName] = data;
+        callback(data);
       } else {
-        callback({}, r)
+        callback({}, response.data)
       }
     }, function (e) {
       callback(e)
     })
 
   };
-  that.columnTypes = [];
 
-  axios(appconfig.apiRoot + "/meta?query=column_types", {
-    headers: {
-      "Authorization": "Bearer " + getToken()
-    }
-  }).then(function (r) {
-    if (r.status === 200) {
-      r = r.data;
-      that.columnTypes = r;
-    } else {
-      console.log("failed to get column types")
-    }
-  })
-
-  that.getColumnFieldTypes = function () {
+  getColumnFieldTypes() {
+    const that = this;
     console.log("Get column field types", that.columnTypes)
     return that.columnTypes;
   }
 
-  that.isStateMachineEnabled = function (typeName) {
+  isStateMachineEnabled(typeName) {
+    const that = this;
     return that.stateMachineEnabled[typeName] === true;
   };
 
-  that.getColumnKeysWithErrorHandleWithThisBuilder = function () {
-    return function (typeName, callback) {
+  getColumnKeysWithErrorHandleWithThisBuilder(logoutHandler: any): (string, any) => void {
+    const that = this;
+    return function (typeName: string, callback: any) {
       // console.log("load model", typeName);
       return that.getColumnKeys(typeName, function (a, e, s) {
         // console.log("get column kets respone: ", arguments)
         if (e === "error" && s === "Unauthorized") {
-          that.logout();
+          logoutHandler();
         } else {
           callback(a, e, s)
         }
@@ -115,7 +173,8 @@ const WorldManager = function (appconfig, jsonApi, actionManager) {
   };
 
 
-  that.GetJsonApiModel = function (columnModel) {
+  GetJsonApiModel(columnModel) {
+    const that = this;
     console.log('get json api model for ', columnModel);
     const model = {};
     if (!columnModel) {
@@ -141,17 +200,14 @@ const WorldManager = function (appconfig, jsonApi, actionManager) {
 
   };
 
-  const logoutHandler = ";";
-
-  that.modelLoader = that.getColumnKeysWithErrorHandleWithThisBuilder(logoutHandler);
-
-  that.worlds = [];
-
-  that.getWorlds = function () {
+  getWorlds() {
+    const that = this;
     console.log("GET WORLDS", that.worlds)
     return that.worlds;
   };
-  that.getWorldByName = function (name) {
+
+  getWorldByName(name) {
+    const that = this;
     return that.worlds.filter(function (e) {
       return e.table_name === name;
     })[0];
@@ -159,101 +215,19 @@ const WorldManager = function (appconfig, jsonApi, actionManager) {
     // return that.worlds;
   };
 
-  that.systemActions = [];
 
-
-  that.getSystemActions = function () {
+  getSystemActions() {
+    const that = this;
     return that.systemActions;
   }
 
-  that.reclineFieldTypeMap = {};
 
-
-  axios({
-    url: appconfig.apiRoot + '/recline_model'
-  }).then(function (res) {
-    console.log("recline field type map", res)
-    that.reclineFieldTypeMap = res.data;
-  });
-
-  that.getReclineModel = function (tableName, callback) {
-    that.getColumnKeys(tableName, function (columnsModel) {
-      const columns = columnsModel.ColumnModel;
-      console.log("build recline model", columns)
-
-
-      const colNames = Object.keys(columns);
-      const reclineModel = [];
-
-      for (let i = 0; i < colNames.length; i++) {
-        let colName = colNames[i];
-        const colType = columns[colName];
-        if (colType.ColumnType === "hidden") {
-          continue;
-        }
-
-
-        let reclineType = that.reclineFieldTypeMap[colType.ColumnType];
-
-        if (!reclineType) {
-
-
-          if (colType.jsonApi === "hasOne") {
-
-            // reclineModel.push({
-            //   id: colName,
-            //   type: 'object',
-            //   label: window.titleCase(colType.ColumnName)
-            // })
-
-          } else if (colType.jsonApi === "hasMany") {
-            //
-            // reclineModel.push({
-            //   id: colName,
-            //   type: 'array',
-            //   label: window.titleCase(colType.ColumnName)
-            // })
-            //
-
-          }
-
-
-        } else {
-
-
-          reclineModel.push({
-            id: colName,
-            type: reclineType,
-            label: window.titleCase(colType.ColumnName)
-          })
-
-        }
-
-      }
-
-      console.log("recline model", reclineModel)
-      callback(reclineModel);
-      return reclineModel;
-
-
-    })
-  };
-
-
-  jsonApi.define("image.png|jpg|jpeg|gif|tiff", {
-    "__type": "value",
-    "contents": "value",
-    "name": "value",
-    "reference_id": "value",
-    "src": "value",
-    "type": "value"
-  });
-
-  that.loadModel = function (modelName) {
+  loadModel(modelName) {
+    const that = this;
     return new Promise(function (resolve, reject) {
 
       that.modelLoader(modelName, function (columnKeys) {
-        jsonApi.define(modelName, that.GetJsonApiModel(columnKeys.ColumnModel));
+        that.jsonApi.define(modelName, that.GetJsonApiModel(columnKeys.ColumnModel));
         resolve();
       });
 
@@ -261,33 +235,32 @@ const WorldManager = function (appconfig, jsonApi, actionManager) {
 
   }
 
-  that.loadModels = function () {
-
+  loadModels() {
+    const that = this;
     let promise = new Promise(function (resolve, reject) {
 
       // do a thing, possibly async, then…
       that.modelLoader("user", function (columnKeys) {
-        jsonApi.define("user", that.GetJsonApiModel(columnKeys.ColumnModel));
+        that.jsonApi.define("user", that.GetJsonApiModel(columnKeys.ColumnModel));
         that.modelLoader("usergroup", function (columnKeys) {
-          jsonApi.define("usergroup", that.GetJsonApiModel(columnKeys.ColumnModel));
+          that.jsonApi.define("usergroup", that.GetJsonApiModel(columnKeys.ColumnModel));
 
           that.modelLoader("world", function (columnKeys) {
             that.modelLoader("stream", function (streamKeys) {
 
-              jsonApi.define("world", that.GetJsonApiModel(columnKeys.ColumnModel));
-              jsonApi.define("stream", that.GetJsonApiModel(streamKeys.ColumnModel));
+              that.jsonApi.define("world", that.GetJsonApiModel(columnKeys.ColumnModel));
+              that.jsonApi.define("stream", that.GetJsonApiModel(streamKeys.ColumnModel));
               // console.log("world column keys", columnKeys, that.GetJsonApiModel(columnKeys.ColumnModel))
               console.log("Defined world", columnKeys.ColumnModel);
               that.systemActions = columnKeys.Actions;
 
 
-              jsonApi.findAll('world', {
+              that.jsonApi.findAll('world', {
                 page: {number: 1, size: 500},
                 include: ['world_column']
               }).then(function (res) {
                 res = res.data;
                 that.worlds = res;
-                store.commit("SET_WORLDS", res)
                 console.log("Get all worlds result", res)
                 // resolve("Stuff worked!");
                 let total = res.length;
@@ -304,7 +277,7 @@ const WorldManager = function (appconfig, jsonApi, actionManager) {
                         promise = null;
                       }
 
-                      jsonApi.define(typeName, that.GetJsonApiModel(model.ColumnModel));
+                      that.jsonApi.define(typeName, that.GetJsonApiModel(model.ColumnModel));
                     })
                   })(res[t].table_name)
 
@@ -312,21 +285,19 @@ const WorldManager = function (appconfig, jsonApi, actionManager) {
               });
 
 
-              jsonApi.findAll('stream', {
+              that.jsonApi.findAll('stream', {
                 page: {number: 1, size: 500},
               }).then(function (res) {
                 res = res.data;
                 that.streams = res;
-                store.commit("SET_STREAMS", res);
                 console.log("Get all streams result", res);
-
                 const total = res.length;
                 for (let t = 0; t < total; t++) {
                   (function (typename) {
                     that.modelLoader(typename, function (model) {
                       console.log("Loaded stream model", typename, model);
+                      that.jsonApi.define(typename, that.GetJsonApiModel(model.ColumnModel));
                     });
-                    jsonApi.define(typename, that.GetJsonApiModel(model.ColumnModel));
                   })(res[t].stream_name)
                 }
               });
@@ -337,7 +308,6 @@ const WorldManager = function (appconfig, jsonApi, actionManager) {
     });
     return promise;
   }
-};
+}
 
 export default WorldManager;
-
