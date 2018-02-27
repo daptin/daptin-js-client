@@ -1,0 +1,63 @@
+{
+  "name": "daptin-client",
+  "version": "1.0.0",
+  "description": "NodeJS client supporting jsonapi, actions, state machines for daptin backend",
+  "main": "index.js",
+  "keywords": [
+    "daptin",
+    "client",
+    "json-api"
+  ],
+  "author": "Parth Mudgal",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^0.18.0",
+    "devour-client": "^2.0.7"
+  },
+  "devDependencies": {
+    "gulp": "^3.9.1",
+    "gulp-typescript": "^4.0.1",
+    "typescript": "^2.7.2",
+    "jwt-decode": "^2.2.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/daptin/daptin-client-js.git"
+  },
+  "jsdelivr": "dist/main.js",
+  "bugs": {
+    "url": "https://github.com/daptin/daptin-client-js/issues"
+  },
+  "scripts": {
+    "bench:ssr": "npm run build:ssr && node benchmarks/ssr/renderToString.js && node benchmarks/ssr/renderToStream.js",
+    "build": "node build/build.js",
+    "build:ssr": "npm run build -- web-runtime-cjs,web-server-renderer",
+    "build:weex": "npm run build -- weex",
+    "commit": "git-cz",
+    "dev": "rollup -w -c build/config.js --environment TARGET:web-full-dev",
+    "dev:cjs": "rollup -w -c build/config.js --environment TARGET:web-runtime-cjs",
+    "dev:compiler": "rollup -w -c build/config.js --environment TARGET:web-compiler ",
+    "dev:esm": "rollup -w -c build/config.js --environment TARGET:web-runtime-esm",
+    "dev:ssr": "rollup -w -c build/config.js --environment TARGET:web-server-renderer",
+    "dev:test": "karma start test/unit/karma.dev.config.js",
+    "dev:weex": "rollup -w -c build/config.js --environment TARGET:weex-framework",
+    "dev:weex:compiler": "rollup -w -c build/config.js --environment TARGET:weex-compiler ",
+    "dev:weex:factory": "rollup -w -c build/config.js --environment TARGET:weex-factory",
+    "flow": "flow check",
+    "lint": "eslint src build test",
+    "release": "bash build/release.sh",
+    "release:note": "node build/gen-release-note.js",
+    "release:weex": "bash build/release-weex.sh",
+    "sauce": "karma start test/unit/karma.sauce.config.js",
+    "setup": "node build/setup.js",
+    "test": "npm run lint && flow check && npm run test:types && npm run test:cover && npm run test:e2e -- --env phantomjs && npm run test:ssr && npm run test:weex",
+    "test:cover": "karma start test/unit/karma.cover.config.js",
+    "test:e2e": "npm run build -- web-full-prod,web-server-basic-renderer && node test/e2e/runner.js",
+    "test:sauce": "npm run sauce -- 0 && npm run sauce -- 1 && npm run sauce -- 2",
+    "test:ssr": "npm run build:ssr && jasmine JASMINE_CONFIG_PATH=test/ssr/jasmine.json",
+    "test:types": "tsc -p ./types/test/tsconfig.json",
+    "test:unit": "karma start test/unit/karma.unit.config.js",
+    "test:weex": "npm run build:weex && jasmine JASMINE_CONFIG_PATH=test/weex/jasmine.json"
+  },
+  "homepage": "https://github.com/daptin/daptin-client-js#readme"
+}
