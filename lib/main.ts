@@ -16,31 +16,32 @@ export class DaptinClient {
 
   appConfig: AppConfig;
   jsonApi: any;
-  getToken: TokenGetter;
+  tokenGetter: TokenGetter;
   actionManager: ActionManager;
   worldManager: WorldManager;
   statsManager: StatsManager;
 
   constructor(endpoint, debug) {
+    const that = this;
     debug = debug || false;
-    this.appConfig = new AppConfig(endpoint);
+    that.appConfig = new AppConfig(endpoint);
 
-    this.jsonApi = new JsonApi({
-      apiUrl: this.appConfig.getEndpoint() + '/api',
+    that.jsonApi = new JsonApi({
+      apiUrl: that.appConfig.getEndpoint() + '/api',
       pluralize: false,
       logger: debug
     });
 
-    this.getToken = new LocalStorageTokenGetter();
-    this.actionManager = new ActionManager(this.appConfig, this.getToken);
-    this.worldManager = new WorldManager(this.appConfig, this.getToken, this.jsonApi, this.actionManager)
-    this.statsManager = new StatsManager(this.appConfig, this.getToken)
+    that.tokenGetter = new LocalStorageTokenGetter();
+    that.actionManager = new ActionManager(that.appConfig, that.tokenGetter);
+    that.worldManager = new WorldManager(that.appConfig, that.tokenGetter, that.jsonApi, that.actionManager)
+    that.statsManager = new StatsManager(that.appConfig, that.tokenGetter)
 
 
-    this.jsonApi.insertMiddlewareBefore("HEADER", {
+    that.jsonApi.insertMiddlewareBefore("HEADER", {
       name: "Auth Header middleware",
       req: function (req) {
-        this.jsonApi.headers['Authorization'] = 'Bearer ' + this.tokenGetter.getToken();
+        that.jsonApi.headers['Authorization'] = 'Bearer ' + that.tokenGetter.getToken();
         return req
       }
     });

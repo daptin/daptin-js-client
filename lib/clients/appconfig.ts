@@ -11,7 +11,7 @@ export class AppConfig {
   localStorage: LocalStorage;
 
   constructor(endpoint: string) {
-    this.endpoint = window.location.protocol + "//" + endpoint;
+    this.endpoint = endpoint;
     this.localStorage = new InMemoryLocalStorage();
   }
 

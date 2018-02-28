@@ -7,10 +7,10 @@ import ActionManager from "./actionmanager";
 
 
 export class WorldManager {
-  columnKeysCache: {};
-  stateMachines: {};
-  stateMachineEnabled: {};
-  streams: {};
+  columnKeysCache: any;
+  stateMachines: any;
+  stateMachineEnabled: any;
+  streams: any;
   appConfig: AppConfigProvider;
   jsonApi: any;
   actionManager: ActionManager;
@@ -25,6 +25,12 @@ export class WorldManager {
     this.jsonApi = jsonApi;
     this.actionManager = actionManager;
     this.tokenGetter = tokenGetter;
+    this.columnKeysCache = {};
+    this.stateMachineEnabled = {};
+    this.stateMachines = {};
+    this.systemActions = {};
+    this.worlds = {};
+    this.columnTypes = {};
     this.init()
   }
 
@@ -211,8 +217,6 @@ export class WorldManager {
     return that.worlds.filter(function (e) {
       return e.table_name === name;
     })[0];
-    // console.log("GET WORLDS", that.worlds)
-    // return that.worlds;
   };
 
 
@@ -230,9 +234,7 @@ export class WorldManager {
         that.jsonApi.define(modelName, that.GetJsonApiModel(columnKeys.ColumnModel));
         resolve();
       });
-
     });
-
   }
 
   loadModels() {

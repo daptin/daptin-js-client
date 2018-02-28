@@ -6,11 +6,12 @@ export class ActionManager  {
 
   appConfig: AppConfigProvider;
   tokenGetter: TokenGetter;
-  actionMap: object;
+  actionMap: any;
 
   constructor(appConfig, getToken) {
     this.appConfig = appConfig;
     this.tokenGetter = getToken;
+    this.actionMap = {};
   }
   setActions (typeName, actions) {
     this.actionMap[typeName] = actions;
