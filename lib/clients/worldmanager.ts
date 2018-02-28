@@ -17,7 +17,7 @@ export class WorldManager {
   columnTypes: any;
   worlds: any;
   systemActions: any;
-  modelLoader: (string, any) => void;
+  modelLoader: (string: string, any: any) => void;
   tokenGetter: TokenGetter;
 
   constructor(appConfig: AppConfigProvider, tokenGetter: TokenGetter, jsonApi: any, actionManager: ActionManager) {
@@ -157,7 +157,7 @@ export class WorldManager {
     return that.stateMachineEnabled[typeName] === true;
   };
 
-  getColumnKeysWithErrorHandleWithThisBuilder(logoutHandler: any): (string, any) => void {
+  getColumnKeysWithErrorHandleWithThisBuilder(logoutHandler: any): (string: string, any: any) => void {
     const that = this;
     return function (typeName: string, callback: any) {
       // console.log("load model", typeName);

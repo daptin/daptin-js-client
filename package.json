@@ -1,6 +1,6 @@
 {
   "name": "daptin-client",
-  "version": "0.0.1",
+  "version": "0.0.9",
   "description": "NodeJS client supporting jsonapi, actions, state machines for daptin backend",
   "keywords": [
     "daptin",
@@ -14,23 +14,25 @@
     "devour-client": "^2.0.7"
   },
   "devDependencies": {
+    "@types/core-js": "^0.9.46",
+    "@types/jasmine": "^2.8.6",
+    "@types/node": "^9.4.6",
+    "core-js": "^2.5.3",
     "gulp": "^3.9.1",
     "gulp-typescript": "^4.0.1",
-    "typescript": "^2.7.2",
     "jwt-decode": "^2.2.0",
-    "@types/node": "^9.4.6",
-    "@types/jasmine": "^2.8.6"
+    "typescript": "^2.7.2"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/daptin/daptin-client-js.git"
   },
-  "jsdelivr": "dist/main.js",
+  "jsdelivr": "dist/src/main.js",
   "bugs": {
     "url": "https://github.com/daptin/daptin-client-js/issues"
   },
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "main": "dist/main.js",
+  "types": "dist/main.d.ts",
   "scripts": {
     "build": "tsc"
   },

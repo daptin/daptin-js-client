@@ -13,28 +13,27 @@ var LocalStorageTokenGetter = /** @class */ (function () {
     };
     return LocalStorageTokenGetter;
 }());
-function DaptinClient(endpoint, debug) {
-    var that = this;
-    debug = debug || false;
-    var appConfig = new appconfig_1.AppConfig(endpoint);
-    var jsonApi = new devour_client_1.JsonApi({
-        apiUrl: appConfig.getEndpoint() + '/api',
-        pluralize: false,
-        logger: debug
-    });
-    that.getToken = new LocalStorageTokenGetter();
-    var actionManager = new actionmanager_1.ActionManager(appConfig, that.getToken);
-    var worldManager = new worldmanager_1.WorldManager(appConfig, that.getToken, jsonApi, actionManager);
-    var statsManager = new statsmanager_1.StatsManager(appConfig, that.getToken);
-    jsonApi.insertMiddlewareBefore("HEADER", {
-        name: "Auth Header middleware",
-        req: function (req) {
-            jsonApi.headers['Authorization'] = 'Bearer ' + that.getToken();
-            return req;
-        }
-    });
-    that.actionManager = actionManager;
-    that.appConfig = appConfig;
-    that.worldManager = worldManager;
-    that.statsManager = statsManager;
-}
+var DaptinClient = /** @class */ (function () {
+    function DaptinClient(endpoint, debug) {
+        debug = debug || false;
+        this.appConfig = new appconfig_1.AppConfig(endpoint);
+        this.jsonApi = new devour_client_1.JsonApi({
+            apiUrl: this.appConfig.getEndpoint() + '/api',
+            pluralize: false,
+            logger: debug
+        });
+        this.getToken = new LocalStorageTokenGetter();
+        this.actionManager = new actionmanager_1.ActionManager(this.appConfig, this.getToken);
+        this.worldManager = new worldmanager_1.WorldManager(this.appConfig, this.getToken, this.jsonApi, this.actionManager);
+        this.statsManager = new statsmanager_1.StatsManager(this.appConfig, this.getToken);
+        this.jsonApi.insertMiddlewareBefore("HEADER", {
+            name: "Auth Header middleware",
+            req: function (req) {
+                this.jsonApi.headers['Authorization'] = 'Bearer ' + this.tokenGetter.getToken();
+                return req;
+            }
+        });
+    }
+    return DaptinClient;
+}());
+exports.DaptinClient = DaptinClient;
