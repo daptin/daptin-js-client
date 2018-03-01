@@ -38,7 +38,6 @@ export class StatsManager {
 
   getStats(tableName, statsRequest) {
 
-    console.log("create stats request", tableName, statsRequest)
     return new Promise(function (resolve, reject) {
       return axios({
         url: this.appConfig.getEndpoint() + "/stats/" + tableName + StatsManager.queryToParams(statsRequest),

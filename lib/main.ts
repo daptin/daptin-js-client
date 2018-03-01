@@ -41,7 +41,10 @@ export class DaptinClient {
     that.jsonApi.insertMiddlewareBefore("HEADER", {
       name: "Auth Header middleware",
       req: function (req) {
-        that.jsonApi.headers['Authorization'] = 'Bearer ' + that.tokenGetter.getToken();
+        let token = that.tokenGetter.getToken();
+        if (token) {
+          that.jsonApi.headers['Authorization'] = 'Bearer ' + token;
+        }
         return req
       }
     });

@@ -2,7 +2,7 @@ import axios from "axios"
 import jwtDecode from 'jwt-decode'
 import {AppConfigProvider, TokenGetter} from "./interface";
 
-export class ActionManager  {
+export class ActionManager {
 
   appConfig: AppConfigProvider;
   tokenGetter: TokenGetter;
@@ -13,12 +13,13 @@ export class ActionManager  {
     this.tokenGetter = getToken;
     this.actionMap = {};
   }
-  setActions (typeName, actions) {
+
+  setActions(typeName, actions) {
     this.actionMap[typeName] = actions;
   };
 
 
-  private static base64ToArrayBuffer (base64) {
+  private static base64ToArrayBuffer(base64) {
     const binaryString = window.atob(base64);
     const binaryLen = binaryString.length;
     const bytes = new Uint8Array(binaryLen);
@@ -28,7 +29,7 @@ export class ActionManager  {
     return bytes;
   };
 
-  private static saveByteArray (downloadData) {
+  private static saveByteArray(downloadData) {
     const blob = new Blob([atob(downloadData.content)], {type: downloadData.contentType}),
       url = window.URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -39,14 +40,13 @@ export class ActionManager  {
   };
 
 
-  getGuestActions () {
+  getGuestActions() {
     const that = this;
     return new Promise(function (resolve, reject) {
       axios({
         url: that.appConfig.apiRoot + "/actions",
         method: "GET"
       }).then(function (respo) {
-        console.log("Guest actions list: ", respo);
         resolve(respo.data)
       }, function (rs) {
         console.log("get actions list fetch failed", arguments);
@@ -55,7 +55,7 @@ export class ActionManager  {
     });
   };
 
-  doAction (type, actionName, data) {
+  doAction(type, actionName, data) {
     // console.log("invoke action", type, actionName, data);
     const that = this;
     return new Promise(function (resolve, reject) {
@@ -129,7 +129,7 @@ export class ActionManager  {
 
   };
 
-  addAllActions (actions) {
+  addAllActions(actions) {
 
     for (let i = 0; i < actions.length; i++) {
       const action = actions[i];
@@ -143,11 +143,11 @@ export class ActionManager  {
     }
   };
 
-  getActions (typeName) {
+  getActions(typeName) {
     return this.actionMap[typeName];
   };
 
-  getActionModel (typeName, actionName) {
+  getActionModel(typeName, actionName) {
     return this.actionMap[typeName][actionName];
   };
 
