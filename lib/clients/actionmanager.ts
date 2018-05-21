@@ -1,5 +1,5 @@
 import axios from "axios"
-import jwtDecode from 'jwt-decode'
+import * as jwt_decode from 'jwt-decode';
 import {AppConfigProvider, TokenGetter} from "./interface";
 
 export class ActionManager {
@@ -69,7 +69,7 @@ export class ActionManager {
           attributes: data
         }
       }).then(function (res) {
-        resolve("completed");
+        resolve(res.data);
         console.log("action response", res);
         const responses = res.data;
         for (let i = 0; i < responses.length; i++) {
@@ -79,13 +79,12 @@ export class ActionManager {
           switch (responseType) {
             case "client.notify":
               console.log("notify client", data);
-              alert(JSON.stringify(data));
               break;
             case "client.store.set":
               console.log("notify client", data);
               window.localStorage.setItem(data.key, data.value);
               if (data.key === "token") {
-                window.localStorage.setItem('user', JSON.stringify(jwtDecode(data.value)));
+                window.localStorage.setItem('user', JSON.stringify(jwt_decode(data.value)));
               }
               break;
             case "client.file.download":
@@ -106,8 +105,6 @@ export class ActionManager {
                     } else {
                       window.location.replace(redirectAttrs.location);
                     }
-
-
                     // window.vueApp.$router.push(redirectAttrs.location);
                   } else {
                     window.open(redirectAttrs.location, "_target")
