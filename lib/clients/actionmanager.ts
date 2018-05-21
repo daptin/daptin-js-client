@@ -44,7 +44,7 @@ export class ActionManager {
     const that = this;
     return new Promise(function (resolve, reject) {
       axios({
-        url: that.appConfig.apiRoot + "/actions",
+        url: that.appConfig.endpoint + "/actions",
         method: "GET"
       }).then(function (respo) {
         resolve(respo.data)
@@ -60,7 +60,7 @@ export class ActionManager {
     const that = this;
     return new Promise(function (resolve, reject) {
       axios({
-        url: that.appConfig.apiRoot + "/action/" + type + "/" + actionName,
+        url: that.appConfig.endpoint + "/action/" + type + "/" + actionName,
         method: "POST",
         headers: {
           "Authorization": "Bearer " + that.tokenGetter.getToken()
