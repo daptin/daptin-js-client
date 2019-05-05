@@ -1,6 +1,6 @@
 {
   "name": "daptin-client",
-  "version": "0.1.8",
+  "version": "0.2.0",
   "description": "NodeJS client supporting jsonapi, actions, state machines for daptin backend",
   "keywords": [
     "daptin",
@@ -11,7 +11,8 @@
   "license": "MIT",
   "dependencies": {
     "axios": "^0.18.0",
-    "devour-client": "^2.0.7"
+    "devour-client": "^2.0.7",
+    "pluralize": "^7.0.0"
   },
   "devDependencies": {
     "@types/core-js": "^0.9.46",

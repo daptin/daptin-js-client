@@ -259,8 +259,8 @@ export class WorldManager {
     let promise = new Promise(function (resolve, reject) {
 
       // do a thing, possibly async, then…
-      that.modelLoader("user", function (columnKeys) {
-        that.jsonApi.define("user", that.GetJsonApiModel(columnKeys.ColumnModel));
+      that.modelLoader("user_account", function (columnKeys) {
+        that.jsonApi.define("user_account", that.GetJsonApiModel(columnKeys.ColumnModel));
         that.modelLoader("usergroup", function (columnKeys) {
           that.jsonApi.define("usergroup", that.GetJsonApiModel(columnKeys.ColumnModel));
 
