@@ -91,28 +91,6 @@ export class ActionManager {
               ActionManager.saveByteArray(data);
               break;
             case "client.redirect":
-              (function (redirectAttrs) {
-
-                setTimeout(function () {
-
-                  const target = redirectAttrs["window"];
-
-                  if (target === "self") {
-
-                    if (redirectAttrs.location[0] === '/') {
-                      window.location.replace(redirectAttrs.location);
-                      // window.vueApp.$router.push(redirectAttrs.location)
-                    } else {
-                      window.location.replace(redirectAttrs.location);
-                    }
-                    // window.vueApp.$router.push(redirectAttrs.location);
-                  } else {
-                    window.open(redirectAttrs.location, "_target")
-                  }
-
-                }, redirectAttrs.delay)
-
-              })(data);
               break;
 
           }
