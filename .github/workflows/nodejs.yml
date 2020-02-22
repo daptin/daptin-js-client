@@ -22,3 +22,6 @@ jobs:
     - run: npm test
       env:
         CI: true
+    - with:
+        name: build
+        path: build
