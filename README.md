@@ -1,6 +1,9 @@
 Daptin Client for JavaScript and TypeScript
 =
 
+[![NPM](https://nodei.co/npm/daptin-client.png)](https://npmjs.org/package/daptin-client)
+
+
 Daptin Client for Node/JS/TS ecosystem which extends over the basic JSON API calls and allowes you to execute Action APIs as well handling user auth configurably using a tokenGetter.
 
 
