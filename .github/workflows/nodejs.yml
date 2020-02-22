@@ -22,8 +22,3 @@ jobs:
     - run: npm test
       env:
         CI: true
-    - with:
-        name: build
-        path: build
-      uses: actions/upload-artifact@v1
-      name: Upload build
