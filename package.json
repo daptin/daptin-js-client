@@ -2,7 +2,6 @@
   "name": "daptin-client",
   "version": "0.2.6",
   "description": "NodeJS client supporting jsonapi, actions, state machines, configuration and aggregate api for daptin backend",
-  "publishConfig": { "registry": "https://npm.pkg.github.com/" },
   "keywords": [
     "daptin",
     "client",
