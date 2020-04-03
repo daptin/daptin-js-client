@@ -228,8 +228,8 @@ export class WorldManager {
             return new Promise(function (resolve, reject) {
                 that.modelLoader(mName).then(function (columnKeys) {
                     that.jsonApi.define(mName, that.GetJsonApiModel(columnKeys.ColumnModel));
-                    resolve();
-                });
+                    resolve(that.GetJsonApiModel(columnKeys.ColumnModel));
+                }).catch(reject);
             })
         }))
     }
@@ -253,7 +253,9 @@ export class WorldManager {
                                 resolve(that.GetJsonApiModel(model.ColumnModel))
                             }).catch(reject)
                         })
-                    })).then(resolve).catch(reject);
+                    })).then(function () {
+                        resolve(res);
+                    }).catch(reject);
 
                 });
             });
@@ -279,7 +281,7 @@ export class WorldManager {
                     res = res.data;
                     let total = res.length;
                     if (total == 0) {
-                        reject();
+                        reject({error: "no results from server"});
                     }
                     that.worlds[res[0].table_name] = res[0];
                     resolve(res[0])
@@ -310,7 +312,9 @@ export class WorldManager {
                 Promise.all(res.map(function (world) {
                     that.worlds[world.table_name] = world;
                     return that.refreshWorld(world.table_name);
-                })).then(resolve).catch(reject);
+                })).then(function () {
+                    resolve(res);
+                }).catch(reject);
             })
 
         })
@@ -329,7 +333,9 @@ export class WorldManager {
             const worldDef = await that.modelLoader("world");
             that.systemActions = worldDef.Actions;
             that.jsonApi.define("world", that.GetJsonApiModel(worldDef.ColumnModel));
-            that.refreshWorlds().then(reject).catch(reject);
+            that.refreshWorlds().then(function () {
+                resolve(that.worlds);
+            }).catch(reject);
         });
     }
 }
