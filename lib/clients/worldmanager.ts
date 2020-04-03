@@ -31,9 +31,16 @@ export class WorldManager {
     jsonApi: any;
     actionManager: ActionManager;
     columnTypes: any;
-    worlds: Array<any>;
+    worlds: Object;
     systemActions: any;
-    modelLoader: (string: string, any: any) => void;
+
+    modelLoader(typeName): Promise<any> {
+        const that = this;
+        return new Promise(function (resolve, reject) {
+            return that.getColumnKeys(typeName).then(resolve).catch(reject)
+        });
+    };
+
     tokenGetter: TokenGetter;
 
     constructor(appConfig: AppConfigProvider, tokenGetter: TokenGetter, jsonApi: any, actionManager: ActionManager) {
@@ -45,41 +52,38 @@ export class WorldManager {
         this.stateMachineEnabled = {};
         this.stateMachines = {};
         this.systemActions = {};
-        this.worlds = [];
+        this.worlds = {};
         this.columnTypes = {};
         this.init()
     }
 
     init() {
         const that = this;
+        return new Promise(function (resolve, reject) {
+            that.columnTypes = [];
 
-        that.columnTypes = [];
+            axios(that.appConfig.getEndpoint() + "/meta?query=column_types", {
+                headers: {
+                    "Authorization": "Bearer " + that.tokenGetter.getToken()
+                }
+            }).then(function (r: AxiosResponse<string>) {
+                if (r.status === 200) {
+                    that.columnTypes = r.data;
+                    resolve(r.data);
+                } else {
+                    reject(r.data)
+                }
+            }, reject);
 
-        axios(this.appConfig.getEndpoint() + "/meta?query=column_types", {
-            headers: {
-                "Authorization": "Bearer " + that.tokenGetter.getToken()
-            }
-        }).then(function (r: AxiosResponse<string>) {
-            if (r.status === 200) {
-                that.columnTypes = r.data;
-            } else {
-                console.log("failed to get column types")
-            }
+            that.jsonApi.define("image.png|jpg|jpeg|gif|tiff", {
+                "__type": "value",
+                "contents": "value",
+                "name": "value",
+                "reference_id": "value",
+                "src": "value",
+                "type": "value"
+            });
         })
-
-        const logoutHandler = ";";
-
-        that.modelLoader = that.getColumnKeysWithErrorHandleWithThisBuilder(logoutHandler);
-
-        this.jsonApi.define("image.png|jpg|jpeg|gif|tiff", {
-            "__type": "value",
-            "contents": "value",
-            "name": "value",
-            "reference_id": "value",
-            "src": "value",
-            "type": "value"
-        });
-
     }
 
 
@@ -95,14 +99,14 @@ export class WorldManager {
 
         return new Promise(function (resolve, reject) {
             axios({
-                url: this.appConfig.getEndpoint() + "/track/start/" + stateMachineRefId,
+                url: that.appConfig.getEndpoint() + "/track/start/" + stateMachineRefId,
                 method: "POST",
                 data: {
                     typeName: objType,
                     referenceId: objRefId
                 },
                 headers: {
-                    "Authorization": "Bearer " + this.tokenGetter.getToken()
+                    "Authorization": "Bearer " + that.tokenGetter.getToken()
                 }
             }).then(function (response: AxiosResponse) {
                 resolve(response.data);
@@ -116,10 +120,10 @@ export class WorldManager {
         const that = this;
         return new Promise(function (resolve, reject) {
             axios({
-                url: this.appConfig.getEndpoint() + "/track/event/" + typeName + "/" + stateMachineRefId + "/" + eventName,
+                url: that.appConfig.getEndpoint() + "/track/event/" + typeName + "/" + stateMachineRefId + "/" + eventName,
                 method: "POST",
                 headers: {
-                    "Authorization": "Bearer " + this.tokenGetter.getToken()
+                    "Authorization": "Bearer " + that.tokenGetter.getToken()
                 }
             }).then(function (response: AxiosResponse) {
                 resolve(response.data);
@@ -129,41 +133,43 @@ export class WorldManager {
         })
     };
 
-    getColumnKeys(typeName, callback) {
+    getColumnKeys(typeName): Promise<any> {
         const that = this;
-        // console.log("get column keys for ", typeName);
-        if (that.columnKeysCache[typeName]) {
-            callback(that.columnKeysCache[typeName]);
-            return
-        }
+        return new Promise(function (resolve, reject) {
 
-        axios(this.appConfig.getEndpoint() + '/jsmodel/' + typeName + ".js", {
-            headers: {
-                "Authorization": "Bearer " + this.tokenGetter.getToken()
-            },
-        }).then(function (response: AxiosResponse) {
-            if (response.status === 200) {
-                const data = response.data;
-                if (data.Actions.length > 0) {
-                    console.log("Register actions", typeName, data.Actions,)
-                    that.actionManager.addAllActions(data.Actions);
-                }
-                that.stateMachines[typeName] = data.StateMachines;
-                that.stateMachineEnabled[typeName] = data.IsStateMachineEnabled;
-                that.columnKeysCache[typeName] = data;
-                callback(data);
-            } else {
-                callback({}, response.data)
+            if (that.columnKeysCache[typeName]) {
+                resolve(that.columnKeysCache[typeName]);
+                return
             }
-        }, function (e) {
-            callback(e)
-        })
+
+            axios(that.appConfig.getEndpoint() + '/jsmodel/' + typeName + ".js", {
+                headers: {
+                    "Authorization": "Bearer " + that.tokenGetter.getToken()
+                },
+            }).then(function (response: AxiosResponse) {
+                if (response.status === 200) {
+                    const data = response.data;
+                    if (data.Actions.length > 0) {
+                        console.log("Register actions", typeName, data.Actions,);
+                        that.actionManager.addAllActions(data.Actions);
+                    }
+                    that.stateMachines[typeName] = data.StateMachines;
+                    that.stateMachineEnabled[typeName] = data.IsStateMachineEnabled;
+                    that.columnKeysCache[typeName] = data;
+                    resolve(data);
+                } else {
+                    reject({error: response.data})
+                }
+            }, function (e) {
+                reject({error: e})
+            })
+
+        });
 
     };
 
     getColumnFieldTypes() {
         const that = this;
-        console.log("Get column field types", that.columnTypes)
         return that.columnTypes;
     }
 
@@ -172,28 +178,11 @@ export class WorldManager {
         return that.stateMachineEnabled[typeName] === true;
     };
 
-    getColumnKeysWithErrorHandleWithThisBuilder(logoutHandler: any): (string: string, any: any) => void {
-        const that = this;
-        return function (typeName: string, callback: any) {
-            // console.log("load model", typeName);
-            return that.getColumnKeys(typeName, function (a, e, s) {
-                // console.log("get column kets respone: ", arguments)
-                if (e === "error" && s === "Unauthorized") {
-                    logoutHandler();
-                } else {
-                    callback(a, e, s)
-                }
-            })
-        }
-    };
-
 
     GetJsonApiModel(columnModel) {
         const that = this;
-        console.log('get json api model for ', columnModel);
         const model = {};
         if (!columnModel) {
-            console.log("Column model is empty", columnModel);
             return model;
         }
 
@@ -210,14 +199,11 @@ export class WorldManager {
             }
         }
 
-        // console.log("returning model", model)
         return model;
-
     };
 
     getWorlds() {
         const that = this;
-        console.log("GET WORLDS", that.worlds)
         return that.worlds;
     };
 
@@ -240,7 +226,7 @@ export class WorldManager {
         const that = this;
         return Promise.all(modelName.map(function (mName) {
             return new Promise(function (resolve, reject) {
-                that.modelLoader(mName, function (columnKeys) {
+                that.modelLoader(mName).then(function (columnKeys) {
                     that.jsonApi.define(mName, that.GetJsonApiModel(columnKeys.ColumnModel));
                     resolve();
                 });
@@ -250,86 +236,101 @@ export class WorldManager {
 
     loadStreams() {
         const that = this;
-        that.modelLoader("stream", function (streamKeys) {
-            that.jsonApi.define("stream", that.GetJsonApiModel(streamKeys.ColumnModel));
-            that.jsonApi.findAll('stream', {
-                page: {number: 1, size: 500},
-            }).then(function (res) {
-                res = res.data;
-                that.streams = res;
-                console.log("Get all streams result", res);
-                const total = res.length;
-                for (let t = 0; t < total; t++) {
-                    (function (typename) {
-                        that.modelLoader(typename, function (model) {
-                            console.log("Loaded stream model", typename, model);
-                            that.jsonApi.define(typename, that.GetJsonApiModel(model.ColumnModel));
-                        });
-                    })(res[t].stream_name)
-                }
+        return new Promise(function (resolve, reject) {
+            that.modelLoader("stream").then(function (streamKeys) {
+                that.jsonApi.define("stream", that.GetJsonApiModel(streamKeys.ColumnModel));
+                that.jsonApi.findAll('stream', {
+                    page: {number: 1, size: 500},
+                }).then(function (res) {
+                    res = res.data;
+                    that.streams = res;
+                    console.log("Get all streams result", res);
+                    Promise.all(that.streams.map(function (stream) {
+                        return new Promise(function (resolve, reject) {
+                            that.modelLoader(stream.stream_name).then(function (model) {
+                                console.log("Loaded stream model", stream.stream_name, model);
+                                that.jsonApi.define(stream.stream_name, that.GetJsonApiModel(model.ColumnModel));
+                                resolve(that.GetJsonApiModel(model.ColumnModel))
+                            }).catch(reject)
+                        })
+                    })).then(resolve).catch(reject);
+
+                });
             });
         });
+    }
+
+    refreshWorld(worldName): Promise<any> {
+
+        const that = this;
+        return new Promise(function (resolve, reject) {
+
+            if (worldName.indexOf("_has_") > -1) {
+                resolve();
+                return
+            }
+
+            var promises = [];
+            if (!that.worlds[worldName]) {
+                promises.push(that.jsonApi.findAll('world', {
+                    page: {number: 1, size: 500},
+                    query: [{"column": "table_name", "operator": "is", "value": worldName}],
+                }).then(function (res) {
+                    res = res.data;
+                    let total = res.length;
+                    if (total == 0) {
+                        reject();
+                    }
+                    that.worlds[res[0].table_name] = res[0];
+                    resolve(res[0])
+                }))
+            }
+            promises.push(that.modelLoader(worldName).then(function (model) {
+                let jsonApiModel = that.GetJsonApiModel(model.ColumnModel);
+                that.jsonApi.define(worldName, jsonApiModel);
+                resolve(jsonApiModel)
+            }).catch(reject));
+
+            return Promise.all(promises)
+
+        })
+    }
+
+    refreshWorlds(): Promise<any> {
+        const that = this;
+        return new Promise(function (resolve, reject) {
+            that.jsonApi.findAll('world', {
+                page: {number: 1, size: 500}
+            }).then(function (res) {
+                res = res.data;
+                let total = res.length;
+                if (total == 0) {
+                    reject({error: "no tables found"});
+                }
+                Promise.all(res.map(function (world) {
+                    that.worlds[world.table_name] = world;
+                    return that.refreshWorld(world.table_name);
+                })).then(resolve).catch(reject);
+            })
+
+        })
 
     }
 
     loadModels() {
         const that = this;
-        let promise = new Promise(function (resolve, reject) {
+        return new Promise(async function (resolve, reject) {
+            const userAccountDef = await that.modelLoader("user_account");
+            that.jsonApi.define("user_account", that.GetJsonApiModel(userAccountDef.ColumnModel));
 
-            // do a thing, possibly async, then…
-            that.modelLoader("user_account", function (columnKeys) {
-                that.jsonApi.define("user_account", that.GetJsonApiModel(columnKeys.ColumnModel));
-                that.modelLoader("usergroup", function (columnKeys) {
-                    that.jsonApi.define("usergroup", that.GetJsonApiModel(columnKeys.ColumnModel));
+            const userGroupDef = await that.modelLoader("usergroup");
+            that.jsonApi.define("usergroup", that.GetJsonApiModel(userGroupDef.ColumnModel));
 
-                    that.modelLoader("world", function (columnKeys) {
-
-                        that.jsonApi.define("world", that.GetJsonApiModel(columnKeys.ColumnModel));
-                        // console.log("world column keys", columnKeys, that.GetJsonApiModel(columnKeys.ColumnModel))
-                        that.systemActions = columnKeys.Actions;
-
-                        that.jsonApi.findAll('world', {
-                            page: {number: 1, size: 500}
-                        }).then(function (res) {
-                            res = res.data;
-                            that.worlds = res;
-                            // resolve("Stuff worked!");
-                            let total = res.length;
-                            if (total == 0) {
-                                resolve();
-                            }
-
-                            for (let t = 0; t < res.length; t++) {
-                                (function (typeName) {
-                                    if (typeName.indexOf("_has_") > -1) {
-                                        total -= 1;
-                                        if (total < 1 && promise !== null) {
-                                            resolve();
-                                            promise = null;
-                                        }
-                                        return
-                                    }
-                                    that.modelLoader(typeName, function (model) {
-                                        // console.log("Loaded model", typeName, model);
-
-                                        total -= 1;
-
-                                        if (total < 1 && promise !== null) {
-                                            resolve();
-                                            promise = null;
-                                        }
-
-                                        that.jsonApi.define(typeName, that.GetJsonApiModel(model.ColumnModel));
-                                    })
-                                })(res[t].table_name)
-
-                            }
-                        });
-                    })
-                });
-            });
+            const worldDef = await that.modelLoader("world");
+            that.systemActions = worldDef.Actions;
+            that.jsonApi.define("world", that.GetJsonApiModel(worldDef.ColumnModel));
+            that.refreshWorlds().then(reject).catch(reject);
         });
-        return promise;
     }
 }
 
