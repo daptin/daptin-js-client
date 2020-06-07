@@ -17,7 +17,7 @@ export class WorldManager {
   columnTypes: any;
   worlds: any;
   systemActions: any;
-  modelLoader: (string: string, any: any) => void;
+  modelLoader: (typename: string, force: boolean, callback: any) => void;
   tokenGetter: TokenGetter;
 
   constructor(appConfig: AppConfigProvider, tokenGetter: TokenGetter, jsonApi: any, actionManager: ActionManager) {
@@ -44,7 +44,7 @@ export class WorldManager {
         "Authorization": "Bearer " + that.tokenGetter.getToken()
       }
     }).then(function (r: AxiosResponse<string>) {
-      if (r.status === 200) {
+      if (r.status===200) {
         that.columnTypes = r.data;
       } else {
         console.log("failed to get column types")
@@ -113,10 +113,10 @@ export class WorldManager {
     })
   };
 
-  getColumnKeys(typeName, callback) {
+  getColumnKeys(typeName, force, callback) {
     const that = this;
     // console.log("get column keys for ", typeName);
-    if (that.columnKeysCache[typeName]) {
+    if (that.columnKeysCache[typeName] && !force) {
       callback(that.columnKeysCache[typeName]);
       return
     }
@@ -126,7 +126,7 @@ export class WorldManager {
         "Authorization": "Bearer " + this.tokenGetter.getToken()
       },
     }).then(function (response: AxiosResponse) {
-      if (response.status === 200) {
+      if (response.status===200) {
         const data = response.data;
         if (data.Actions.length > 0) {
           console.log("Register actions", typeName, data.Actions,)
@@ -153,16 +153,16 @@ export class WorldManager {
 
   isStateMachineEnabled(typeName) {
     const that = this;
-    return that.stateMachineEnabled[typeName] === true;
+    return that.stateMachineEnabled[typeName]===true;
   };
 
-  getColumnKeysWithErrorHandleWithThisBuilder(logoutHandler: any): (string: string, any: any) => void {
+  getColumnKeysWithErrorHandleWithThisBuilder(logoutHandler: any): (typeName: string, force: boolean, callback: any) => void {
     const that = this;
-    return function (typeName: string, callback: any) {
+    return function (typeName: string, force: boolean, callback: any) {
       // console.log("load model", typeName);
-      return that.getColumnKeys(typeName, function (a, e, s) {
+      return that.getColumnKeys(typeName, force, function (a, e, s) {
         // console.log("get column kets respone: ", arguments)
-        if (e === "error" && s === "Unauthorized") {
+        if (e==="error" && s==="Unauthorized") {
           logoutHandler();
         } else {
           callback(a, e, s)
@@ -208,7 +208,7 @@ export class WorldManager {
   getWorldByName(name) {
     const that = this;
     return that.worlds.filter(function (e) {
-      return e.table_name === name;
+      return e.table_name===name;
     })[0];
   };
 
@@ -219,20 +219,20 @@ export class WorldManager {
   }
 
 
-  loadModel(modelName) {
+  loadModel(modelName, force) {
     const that = this;
     return new Promise(function (resolve, reject) {
 
-      that.modelLoader(modelName, function (columnKeys) {
+      that.modelLoader(modelName, force, function (columnKeys) {
         that.jsonApi.define(modelName, that.GetJsonApiModel(columnKeys.ColumnModel));
         resolve();
       });
     });
   }
 
-  loadStreams() {
+  loadStreams(force) {
     const that = this;
-    that.modelLoader("stream", function (streamKeys) {
+    that.modelLoader("stream", force, function (streamKeys) {
       that.jsonApi.define("stream", that.GetJsonApiModel(streamKeys.ColumnModel));
       that.jsonApi.findAll('stream', {
         page: {number: 1, size: 500},
@@ -243,7 +243,7 @@ export class WorldManager {
         const total = res.length;
         for (let t = 0; t < total; t++) {
           (function (typename) {
-            that.modelLoader(typename, function (model) {
+            that.modelLoader(typename,  force, function (model) {
               console.log("Loaded stream model", typename, model);
               that.jsonApi.define(typename, that.GetJsonApiModel(model.ColumnModel));
             });
@@ -254,17 +254,17 @@ export class WorldManager {
 
   }
 
-  loadModels() {
+  loadModels(force) {
     const that = this;
     let promise = new Promise(function (resolve, reject) {
 
       // do a thing, possibly async, then…
-      that.modelLoader("user_account", function (columnKeys) {
+      that.modelLoader("user_account", force, function (columnKeys) {
         that.jsonApi.define("user_account", that.GetJsonApiModel(columnKeys.ColumnModel));
-        that.modelLoader("usergroup", function (columnKeys) {
+        that.modelLoader("usergroup", force, function (columnKeys) {
           that.jsonApi.define("usergroup", that.GetJsonApiModel(columnKeys.ColumnModel));
 
-          that.modelLoader("world", function (columnKeys) {
+          that.modelLoader("world", force, function (columnKeys) {
 
             that.jsonApi.define("world", that.GetJsonApiModel(columnKeys.ColumnModel));
             // console.log("world column keys", columnKeys, that.GetJsonApiModel(columnKeys.ColumnModel))
@@ -282,18 +282,18 @@ export class WorldManager {
                 (function (typeName) {
                   if (typeName.indexOf("_has_") > -1) {
                     total -= 1;
-                    if (total < 1 && promise !== null) {
+                    if (total < 1 && promise!==null) {
                       resolve();
                       promise = null;
                     }
                     return
                   }
-                  that.modelLoader(typeName, function (model) {
+                  that.modelLoader(typeName, force, function (model) {
                     // console.log("Loaded model", typeName, model);
 
                     total -= 1;
 
-                    if (total < 1 && promise !== null) {
+                    if (total < 1 && promise!==null) {
                       resolve();
                       promise = null;
                     }
