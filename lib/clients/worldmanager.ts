@@ -275,7 +275,7 @@ export class WorldManager {
             var promises = [];
             if (!that.worlds[worldName]) {
                 promises.push(that.jsonApi.findAll('world', {
-                    page: {number: 1, size: 500},
+                    page: {number: 1, size: 1},
                     query: [{"column": "table_name", "operator": "is", "value": worldName}],
                 }).then(function (res) {
                     res = res.data;
@@ -324,6 +324,9 @@ export class WorldManager {
     loadModels(force: boolean) {
         const that = this;
         return new Promise(async function (resolve, reject) {
+            if (force) {
+                that.worlds = {};
+            }
             const userAccountDef = await that.modelLoader("user_account", force);
             that.jsonApi.define("user_account", that.GetJsonApiModel(userAccountDef.ColumnModel));
 
