@@ -29,6 +29,26 @@ export class ConfigManager {
     });
   }
 
+
+  getAllConfig() {
+    const that = this;
+    return new Promise(function (resolve, reject) {
+      axios({
+        url: that.appConfig.endpoint + "/_config",
+        headers: {
+          "Authorization": "Bearer " + that.getToken.getToken()
+        },
+        method: "GET"
+      }).then(function (respo) {
+        resolve(respo.data)
+      }, function (rs) {
+        console.log("config fetch response", arguments);
+        reject(rs)
+      })
+    });
+  }
+
+
   setConfig(configName: string, configType: string, configValue: any) {
     const that = this;
     return new Promise(function (resolve, reject) {
