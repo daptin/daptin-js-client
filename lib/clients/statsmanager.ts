@@ -37,12 +37,12 @@ export class StatsManager {
   };
 
   getStats(tableName, statsRequest) {
-
+    const that = this;
     return new Promise(function (resolve, reject) {
       return axios({
-        url: this.appConfig.getEndpoint() + "/stats/" + tableName + StatsManager.queryToParams(statsRequest),
+        url: that.appConfig.getEndpoint() + "/stats/" + tableName + StatsManager.queryToParams(statsRequest),
         headers: {
-          "Authorization": "Bearer " + this.tokenGetter.getToken()
+          "Authorization": "Bearer " + that.tokenGetter.getToken()
         },
       }).then(function (response: AxiosResponse) {
         resolve(response.data);
