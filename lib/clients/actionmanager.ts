@@ -105,7 +105,7 @@ export class ActionManager {
                 }
             }, function (res) {
                 console.log("action failed", res);
-                reject(res.response.data);
+                reject(res);
             })
 
         })
