@@ -54,7 +54,6 @@ export class WorldManager {
         this.systemActions = {};
         this.worlds = {};
         this.columnTypes = {};
-        this.init()
     }
 
     init() {
@@ -219,7 +218,7 @@ export class WorldManager {
     }
 
 
-    loadModel(modelName, force:boolean) {
+    loadModel(modelName, force: boolean) {
         if (!(modelName instanceof Array)) {
             modelName = [modelName];
         }
@@ -287,7 +286,7 @@ export class WorldManager {
                     resolve(res[0])
                 }))
             }
-            promises.push(that.modelLoader(worldName,force).then(function (model) {
+            promises.push(that.modelLoader(worldName, force).then(function (model) {
                 let jsonApiModel = that.GetJsonApiModel(model.ColumnModel);
                 that.jsonApi.define(worldName, jsonApiModel);
                 resolve(jsonApiModel)
