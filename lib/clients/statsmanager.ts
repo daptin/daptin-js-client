@@ -40,7 +40,7 @@ export class StatsManager {
     const that = this;
     return new Promise(function (resolve, reject) {
       return axios({
-        url: that.appConfig.getEndpoint() + "/stats/" + tableName + StatsManager.queryToParams(statsRequest),
+        url: that.appConfig.getEndpoint() + "/aggregate/" + tableName + StatsManager.queryToParams(statsRequest),
         headers: {
           "Authorization": "Bearer " + that.tokenGetter.getToken()
         },
