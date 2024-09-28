@@ -1,20 +1,22 @@
-import axios from "axios"
+import {AxiosInstance} from "axios"
 import {TokenGetter} from "./interface";
 import AppConfig from "./appconfig";
 
 export class ConfigManager {
   appConfig: AppConfig;
   getToken: TokenGetter;
+  private axios: AxiosInstance;
 
-  constructor(appConfig: AppConfig, getToken: TokenGetter) {
+  constructor(appConfig: AppConfig, getToken: TokenGetter, axiosInstance: AxiosInstance) {
     this.appConfig = appConfig;
     this.getToken = getToken;
+    this.axios = axiosInstance;
   }
 
   getConfig(configName: string, configType: string) {
     const that = this;
     return new Promise(function (resolve, reject) {
-      axios({
+      that.axios({
         url: that.appConfig.endpoint + "/_config/" + configType + "/" + configName,
         headers: {
           "Authorization": "Bearer " + that.getToken.getToken()
@@ -33,7 +35,7 @@ export class ConfigManager {
   getAllConfig() {
     const that = this;
     return new Promise(function (resolve, reject) {
-      axios({
+      that.axios({
         url: that.appConfig.endpoint + "/_config",
         headers: {
           "Authorization": "Bearer " + that.getToken.getToken()
@@ -52,7 +54,7 @@ export class ConfigManager {
   setConfig(configName: string, configType: string, configValue: any) {
     const that = this;
     return new Promise(function (resolve, reject) {
-      axios({
+      that.axios({
         url: that.appConfig.endpoint + "/_config/" + configType + "/" + configName,
         headers: {
           "Authorization": "Bearer " + that.getToken.getToken()

@@ -1,3 +1,4 @@
+import axios from "axios"
 import {ActionManager} from "./clients/actionmanager"
 import {AppConfig} from './clients/appconfig'
 import {StatsManager} from './clients/statsmanager'
@@ -23,22 +24,26 @@ export class DaptinClient {
   public statsManager: StatsManager;
   public configManager: ConfigManager;
 
-  constructor(endpoint, debug, tokenGetter) {
+  constructor(endpoint, debug, tokenGetter, axiosConfig  : any) {
     const that = this;
     debug = debug || false;
+    axiosConfig = axiosConfig || {}
+    let axiosInstance = axios.create(axiosConfig)
     that.appConfig = new AppConfig(endpoint);
 
     that.jsonApi = new JsonApi({
       apiUrl: that.appConfig.getEndpoint() + '/api',
       pluralize: false,
-      logger: debug
+      logger: debug,
+      ...axiosConfig
     });
+    that.jsonApi.axios = axiosInstance;
 
     that.tokenGetter = tokenGetter || new LocalStorageTokenGetter();
-    that.actionManager = new ActionManager(that.appConfig, that.tokenGetter);
-    that.worldManager = new WorldManager(that.appConfig, that.tokenGetter, that.jsonApi, that.actionManager);
-    that.statsManager = new StatsManager(that.appConfig, that.tokenGetter);
-    that.configManager = new ConfigManager(that.appConfig, that.tokenGetter);
+    that.actionManager = new ActionManager(that.appConfig, that.tokenGetter, axiosInstance);
+    that.worldManager = new WorldManager(that.appConfig, that.tokenGetter, that.jsonApi, that.actionManager, axiosInstance);
+    that.statsManager = new StatsManager(that.appConfig, that.tokenGetter, axiosInstance);
+    that.configManager = new ConfigManager(that.appConfig, that.tokenGetter, axiosInstance);
 
 
     that.jsonApi.insertMiddlewareBefore("HEADER", {

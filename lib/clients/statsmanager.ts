@@ -1,14 +1,16 @@
-import axios, {AxiosResponse} from "axios"
+import {AxiosInstance, AxiosResponse} from "axios"
 import {TokenGetter} from './interface'
 import AppConfig from "./appconfig";
 
 export class StatsManager {
   tokenGetter: TokenGetter;
   appConfig: AppConfig;
+  private axios: AxiosInstance;
 
-  constructor(appConfig, tokenGetter: TokenGetter) {
+  constructor(appConfig, tokenGetter: TokenGetter, axiosInstance: AxiosInstance) {
     this.appConfig = appConfig;
     this.tokenGetter = tokenGetter;
+    this.axios = axiosInstance;
   }
 
   private static queryToParams(statsRequest) {
@@ -39,7 +41,7 @@ export class StatsManager {
   getStats(tableName, statsRequest) {
     const that = this;
     return new Promise(function (resolve, reject) {
-      return axios({
+      return that.axios({
         url: that.appConfig.getEndpoint() + "/aggregate/" + tableName + StatsManager.queryToParams(statsRequest),
         headers: {
           "Authorization": "Bearer " + that.tokenGetter.getToken()

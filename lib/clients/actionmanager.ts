@@ -1,4 +1,4 @@
-import axios from "axios"
+import {AxiosInstance} from "axios"
 import * as jwt_decode from 'jwt-decode';
 import {AppConfigProvider, TokenGetter} from "./interface";
 
@@ -7,20 +7,17 @@ export class ActionManager {
     appConfig: AppConfigProvider;
     tokenGetter: TokenGetter;
     actionMap: any;
+    private axios: AxiosInstance;
 
-    constructor(appConfig, getToken) {
+    constructor(appConfig, getToken, axiosInstance) {
         this.appConfig = appConfig;
         this.tokenGetter = getToken;
         this.actionMap = {};
+        this.axios = axiosInstance;
     }
 
-    setActions(typeName, actions) {
-        this.actionMap[typeName] = actions;
-    };
-
-
     private static base64ToArrayBuffer(base64) {
-        const binaryString = window.atob(base64);
+        const binaryString = atob(base64);
         const binaryLen = binaryString.length;
         const bytes = new Uint8Array(binaryLen);
         for (let i = 0; i < binaryLen; i++) {
@@ -39,11 +36,14 @@ export class ActionManager {
         window.URL.revokeObjectURL(url);
     };
 
+    setActions(typeName, actions) {
+        this.actionMap[typeName] = actions;
+    };
 
     getGuestActions() {
         const that = this;
         return new Promise(function (resolve, reject) {
-            axios({
+            that.axios({
                 url: that.appConfig.endpoint + "/actions",
                 method: "GET"
             }).then(function (respo) {
@@ -59,7 +59,7 @@ export class ActionManager {
         // console.log("invoke action", type, actionName, data);
         const that = this;
         return new Promise(function (resolve, reject) {
-            axios({
+            that.axios({
                 url: that.appConfig.endpoint + "/action/" + type + "/" + actionName,
                 method: "POST",
                 headers: {
@@ -70,41 +70,7 @@ export class ActionManager {
                 }
             }).then(function (res) {
                 resolve(res.data);
-                console.log("action response", res);
-                const responses = res.data;
-                for (let i = 0; i < responses.length; i++) {
-                    const responseType = responses[i].ResponseType;
-
-                    const data = responses[i].Attributes;
-                    switch (responseType) {
-                        case "client.notify":
-                            console.log("notify client", data);
-                            break;
-                        case "client.store.set":
-                            console.log("notify client", data);
-                            if (window && window.localStorage) {
-                                window.localStorage.setItem(data.key, data.value);
-                                if (data.key === "token") {
-                                    window.localStorage.setItem('user', JSON.stringify(jwt_decode(data.value)));
-                                }
-                            }
-                            break;
-                        case "client.file.download":
-                            ActionManager.saveByteArray(data);
-                            break;
-                        case "client.redirect":
-                            break;
-
-                        case "client.cookie.set":
-                            if (document) {
-                                document.cookie = data.key + "=" + data.value + ";"
-                            }
-                            break;
-
-                    }
-                }
             }, function (res) {
-                console.log("action failed", res);
                 reject(res);
             })
 
@@ -134,6 +100,6 @@ export class ActionManager {
         return this.actionMap[typeName][actionName];
     };
 
-};
+}
 
 export default ActionManager

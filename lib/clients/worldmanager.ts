@@ -1,7 +1,7 @@
 /**
  * Created by artpar on 6/7/17.
  */
-import axios, {AxiosResponse} from "axios"
+import {AxiosInstance, AxiosResponse} from "axios"
 import {AppConfigProvider, TokenGetter} from "./interface";
 import ActionManager from "./actionmanager";
 
@@ -33,19 +33,13 @@ export class WorldManager {
     columnTypes: any;
     worlds: Object;
     systemActions: any;
-
-    modelLoader(typeName: string, force: boolean): Promise<any> {
-        const that = this;
-        return new Promise(function (resolve, reject) {
-            return that.getColumnKeys(typeName, force).then(resolve).catch(reject)
-        });
-    };
-
     tokenGetter: TokenGetter;
+    private axios: AxiosInstance;
 
-    constructor(appConfig: AppConfigProvider, tokenGetter: TokenGetter, jsonApi: any, actionManager: ActionManager) {
+    constructor(appConfig: AppConfigProvider, tokenGetter: TokenGetter, jsonApi: any, actionManager: ActionManager, axios: AxiosInstance) {
         this.appConfig = appConfig;
         this.jsonApi = jsonApi;
+        this.axios = axios;
         this.actionManager = actionManager;
         this.tokenGetter = tokenGetter;
         this.columnKeysCache = {};
@@ -56,12 +50,19 @@ export class WorldManager {
         this.columnTypes = {};
     }
 
+    modelLoader(typeName: string, force: boolean): Promise<any> {
+        const that = this;
+        return new Promise(function (resolve, reject) {
+            return that.getColumnKeys(typeName, force).then(resolve).catch(reject)
+        });
+    };
+
     init() {
         const that = this;
         return new Promise(function (resolve, reject) {
             that.columnTypes = [];
 
-            axios(that.appConfig.getEndpoint() + "/meta?query=column_types", {
+            that.axios(that.appConfig.getEndpoint() + "/meta?query=column_types", {
                 headers: {
                     "Authorization": "Bearer " + that.tokenGetter.getToken()
                 }
@@ -97,7 +98,7 @@ export class WorldManager {
         const that = this;
 
         return new Promise(function (resolve, reject) {
-            axios({
+            that.axios({
                 url: that.appConfig.getEndpoint() + "/track/start/" + stateMachineRefId,
                 method: "POST",
                 data: {
@@ -118,7 +119,7 @@ export class WorldManager {
     trackObjectEvent(typeName, stateMachineRefId, eventName) {
         const that = this;
         return new Promise(function (resolve, reject) {
-            axios({
+            that.axios({
                 url: that.appConfig.getEndpoint() + "/track/event/" + typeName + "/" + stateMachineRefId + "/" + eventName,
                 method: "POST",
                 headers: {
@@ -141,7 +142,7 @@ export class WorldManager {
                 return
             }
 
-            axios(that.appConfig.getEndpoint() + '/jsmodel/' + typeName + ".js", {
+            that.axios(that.appConfig.getEndpoint() + '/jsmodel/' + typeName + ".js", {
                 headers: {
                     "Authorization": "Bearer " + that.tokenGetter.getToken()
                 },
@@ -267,7 +268,7 @@ export class WorldManager {
         return new Promise(function (resolve, reject) {
 
             if (worldName.indexOf("_has_") > -1) {
-                resolve();
+                resolve(null);
                 return
             }
 

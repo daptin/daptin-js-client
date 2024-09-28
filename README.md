@@ -42,3 +42,12 @@ daptinClient.worldManager.loadModels().then(function () {
 
 
 ```
+
+
+Publish
+==
+
+```bash
+npm adduser
+npm publish
+```
