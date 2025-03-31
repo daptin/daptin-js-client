@@ -380,20 +380,19 @@ class AggregationClient {
         const endpoint = `${this.appConfig.endpoint}/aggregate/${this.request.RootEntity}`;
 
         try {
-            const response = await fetch(endpoint, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(this.request)
-            });
-
-            if (!response.ok) {
-                const errorText = await response.text();
-                throw new Error(`Aggregation request failed: ${response.status} ${response.statusText} - ${errorText}`);
+            const token = this.tokenGetter.getToken();
+            let requestHeaders = {
+                'Content-Type': 'application/json'
+            };
+            if (token && token.length > 1) {
+                requestHeaders["Authorization"] = "Bearer " + token;
             }
-
-            const result = await response.json();
+            const response = await this.axiosInstance({
+                url: endpoint,
+                method: 'POST',
+                headers: requestHeaders,
+                data: this.request
+            });
 
             // Reset the request for next use
             const currentRequest = this.request;
@@ -401,12 +400,12 @@ class AggregationClient {
 
             if (options.rawResponse) {
                 return {
-                    data: result.data,
+                    data: response.data.data,
                     request: currentRequest
                 };
             }
 
-            return result.data;
+            return response.data.data;
         } catch (error) {
             this._resetRequest();
             throw error;
