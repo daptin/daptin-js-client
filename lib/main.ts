@@ -5,6 +5,7 @@ import {StatsManager} from './clients/statsmanager'
 import {WorldManager} from './clients/worldmanager'
 import {TokenGetter} from "./clients/interface";
 import {ConfigManager} from "./clients/configmanager";
+import AggregationClient from "./clients/aggregate_client";
 
 const JsonApi = require('devour-client');
 
@@ -23,6 +24,7 @@ export class DaptinClient {
   public worldManager: WorldManager;
   public statsManager: StatsManager;
   public configManager: ConfigManager;
+  aggregateClient: AggregationClient;
 
   constructor(endpoint, debug, tokenGetter, axiosConfig  : any) {
     const that = this;
@@ -44,6 +46,7 @@ export class DaptinClient {
     that.worldManager = new WorldManager(that.appConfig, that.tokenGetter, that.jsonApi, that.actionManager, axiosInstance);
     that.statsManager = new StatsManager(that.appConfig, that.tokenGetter, axiosInstance);
     that.configManager = new ConfigManager(that.appConfig, that.tokenGetter, axiosInstance);
+    that.aggregateClient = new AggregationClient(that.appConfig, that.tokenGetter, axiosInstance);
 
 
     that.jsonApi.insertMiddlewareBefore("HEADER", {
