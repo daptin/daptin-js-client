@@ -24,7 +24,7 @@ export class DaptinClient {
   public worldManager: WorldManager;
   public statsManager: StatsManager;
   public configManager: ConfigManager;
-  aggregateClient: AggregationClient;
+  public aggregateClient: AggregationClient;
 
   constructor(endpoint, debug, tokenGetter, axiosConfig  : any) {
     const that = this;
