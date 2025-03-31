@@ -7,7 +7,7 @@ import {TokenGetter} from "./clients/interface";
 import {ConfigManager} from "./clients/configmanager";
 import AggregationClient from "./clients/aggregate_client";
 
-import JsonApi from "devour-client";
+const JsonApi =  require("devour-client");
 
 class LocalStorageTokenGetter {
   getToken(): string {

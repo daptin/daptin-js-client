@@ -10,7 +10,7 @@
     "declaration": true,
     "outDir": "./dist",
     "strict": false,
-    "types": ["@types/jest"],
+    "types": ["@types/jest", "@types/node"],
     "moduleResolution": "node"
   }
 }
