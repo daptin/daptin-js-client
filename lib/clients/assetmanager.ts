@@ -2,7 +2,7 @@
  * Asset upload manager for Daptin
  * Handles streaming uploads, presigned URLs, and progress tracking
  */
-import axios, {AxiosInstance, AxiosProgressEvent} from "axios"
+import axios, {AxiosInstance, Method} from "axios"
 import {AppConfigProvider, TokenGetter} from "./interface";
 
 export interface UploadOptions {
@@ -14,25 +14,24 @@ export interface UploadOptions {
 export interface UploadInitResponse {
     upload_id: string;
     upload_type: 'stream' | 'presigned' | 'multipart';
-    upload_url?: string;
-    presigned_url?: string;
-    method?: string;
-    headers?: Record<string, string>;
-    expires_at?: number;
+    
+    // For regular presigned uploads
     presigned_data?: {
         upload_type: string;
-        presigned_url?: string;
-        method?: string;
+        presigned_url: string;
+        method: string;
         headers?: Record<string, string>;
-        expires_at?: number;
-        upload_id?: string;
-        parts?: Array<{
-            part_number: number;
-            presigned_url: string;
-            headers?: Record<string, string>;
-        }>;
-        complete_multipart_endpoint?: string;
+        expires_at: number;
     };
+    
+    // For multipart uploads
+    s3_upload_id?: string;
+    min_part_size?: number;
+    max_parts?: number;
+    get_part_url?: string;
+    abort_url?: string;
+    
+    // Common
     complete_url: string;
 }
 
@@ -73,12 +72,11 @@ export class AssetManager {
         fileType: string = 'application/octet-stream'
     ): Promise<UploadInitResponse> {
         const response = await this.axios.post<UploadInitResponse>(
-            `${this.appConfig.getEndpoint()}/asset/${typeName}/${resourceId}/${columnName}/upload?operation=init&filename=${fileName}`,
+            `${this.appConfig.getEndpoint()}/asset/${typeName}/${resourceId}/${columnName}/upload?filename=${fileName}`,
             {},
             {
                 headers: {
                     'Authorization': `Bearer ${this.tokenGetter.getToken()}`,
-                    'X-File-Name': fileName,
                     'X-File-Size': fileSize.toString(),
                     'X-File-Type': fileType
                 }
@@ -110,28 +108,51 @@ export class AssetManager {
             file.type
         );
 
-        if ((initResponse.upload_type === 'presigned' || initResponse.presigned_url) && 
-            (initResponse.presigned_data || initResponse.presigned_url)) {
-            // Use presigned URL upload (S3, GCS, Azure)
-            await this.uploadViaPresignedUrl(file, initResponse, options);
-        } else {
-            // Use streaming upload (through server)
-            await this.uploadViaStreaming(
-                typeName,
-                resourceId,
-                columnName,
-                actualFileName,
-                file,
-                initResponse.upload_id,
-                options
-            );
+        switch (initResponse.upload_type) {
+            case 'multipart':
+                // Handle S3 multipart upload for large files
+                await this.uploadViaMultipart(
+                    typeName,
+                    resourceId,
+                    columnName,
+                    actualFileName,
+                    file,
+                    initResponse,
+                    options
+                );
+                break;
+                
+            case 'presigned':
+                // Handle regular presigned URL upload
+                await this.uploadViaPresignedUrl(file, initResponse, options);
+                // Complete the upload
+                await this.completeUpload(
+                    typeName, resourceId, columnName, 
+                    initResponse.upload_id, 
+                    { size: file.size, type: file.type, fileName: actualFileName }
+                );
+                break;
+                
+            case 'stream':
+            default:
+                // Use streaming upload (through server)
+                await this.uploadViaStreaming(
+                    typeName,
+                    resourceId,
+                    columnName,
+                    actualFileName,
+                    file,
+                    initResponse.upload_id,
+                    options
+                );
+                // Complete the upload
+                await this.completeUpload(
+                    typeName, resourceId, columnName,
+                    initResponse.upload_id,
+                    { size: file.size, type: file.type, fileName: actualFileName }
+                );
+                break;
         }
-
-        // Mark upload as complete
-        await this.completeUpload(typeName, resourceId, columnName, actualFileName, initResponse.upload_id, {
-            size: file.size,
-            type: file.type
-        });
     }
 
     /**
@@ -157,7 +178,7 @@ export class AssetManager {
                     'Authorization': `Bearer ${this.tokenGetter.getToken()}`,
                     'Content-Type': file.type || 'application/octet-stream'
                 },
-                onUploadProgress: (progressEvent: AxiosProgressEvent) => {
+                onUploadProgress: (progressEvent: any) => {
                     if (options?.onProgress && progressEvent.total) {
                         const progress: ProgressEvent = {
                             loaded: progressEvent.loaded,
@@ -173,145 +194,202 @@ export class AssetManager {
     }
 
     /**
-     * Upload via presigned URL (S3, GCS, Azure)
+     * Upload via presigned URL (regular S3, GCS, Azure single upload)
      */
     private async uploadViaPresignedUrl(
         file: File | Blob,
         initResponse: UploadInitResponse,
         options?: UploadOptions
     ): Promise<void> {
-        // Check if we have presigned data structure or direct presigned URL
         const presignedData = initResponse.presigned_data;
-        const directPresignedUrl = initResponse.presigned_url;
-        const method = initResponse.method || presignedData?.method || 'PUT';
-        const headers = initResponse.headers || presignedData?.headers || {};
+        
+        if (!presignedData?.presigned_url) {
+            throw new Error('No presigned URL found in response');
+        }
 
-        if (presignedData?.parts && presignedData.parts.length > 0) {
-            // Multipart upload for large files
-            await this.uploadMultipart(file, presignedData, initResponse.upload_id, options);
-        } else {
-            // Single upload - use direct presigned URL or from presigned_data
-            const uploadUrl = directPresignedUrl || presignedData?.presigned_url;
-            
-            if (!uploadUrl) {
-                throw new Error('No presigned URL found in response');
+        const method = (presignedData.method || 'PUT') as Method;
+        const headers = presignedData.headers || {};
+
+        // Use axios with no authentication headers for presigned URLs
+        const uploadAxios = axios.create();
+
+        await uploadAxios.request({
+            method: method,
+            url: presignedData.presigned_url,
+            data: file,
+            headers: {
+                ...headers,
+                'Content-Type': file.type || 'application/octet-stream'
+            },
+            onUploadProgress: (progressEvent) => {
+                if (options?.onProgress && progressEvent.total) {
+                    const progress: ProgressEvent = {
+                        loaded: progressEvent.loaded,
+                        total: progressEvent.total,
+                        percent: (progressEvent.loaded / progressEvent.total) * 100,
+                        uploadId: initResponse.upload_id
+                    };
+                    options.onProgress!(progress);
+                }
             }
+        });
+    }
 
-            // Use axios with no authentication headers for presigned URLs
-            const uploadAxios = axios.create();
+    /**
+     * Upload via S3 multipart for large files
+     */
+    private async uploadViaMultipart(
+        typeName: string,
+        resourceId: string,
+        columnName: string,
+        fileName: string,
+        file: File | Blob,
+        initResponse: UploadInitResponse,
+        options?: UploadOptions
+    ): Promise<void> {
+        if (!initResponse.s3_upload_id) {
+            throw new Error('No S3 upload ID found for multipart upload');
+        }
+
+        const minPartSize = initResponse.min_part_size || (5 * 1024 * 1024); // 5MB default
+        const maxParts = initResponse.max_parts || 10000;
+        
+        // Calculate optimal part size
+        const partSize = Math.max(minPartSize, Math.ceil(file.size / maxParts));
+        const parts: Array<{part_number: number, etag: string}> = [];
+        
+        // Upload parts
+        let uploadedBytes = 0;
+        const uploadAxios = axios.create(); // No auth headers for S3 presigned URLs
+        
+        for (let i = 0; i < file.size; i += partSize) {
+            const partNumber = Math.floor(i / partSize) + 1;
+            const start = i;
+            const end = Math.min(i + partSize, file.size);
+            const chunk = file.slice(start, end);
             
-            await uploadAxios.request({
-                method: method,
-                url: uploadUrl,
-                data: file,
+            // Get presigned URL for this part
+            const partUrlResponse = await this.axios.get<{presigned_url: string, part_number: number}>(
+                `${this.appConfig.getEndpoint()}/asset/${typeName}/${resourceId}/${columnName}/upload?` +
+                `upload_id=${initResponse.s3_upload_id}&filename=${fileName}&part_number=${partNumber}`,
+                {
+                    headers: {
+                        'Authorization': `Bearer ${this.tokenGetter.getToken()}`
+                    }
+                }
+            );
+            
+            // Upload the part to S3
+            const uploadResponse = await uploadAxios.put(partUrlResponse.data.presigned_url, chunk, {
                 headers: {
-                    ...headers,
-                    'Content-Type': file.type || 'application/octet-stream'
+                    'Content-Type': 'application/octet-stream'
                 },
-                onUploadProgress: (progressEvent: AxiosProgressEvent) => {
+                onUploadProgress: (progressEvent) => {
                     if (options?.onProgress && progressEvent.total) {
+                        const totalProgress = uploadedBytes + progressEvent.loaded;
                         const progress: ProgressEvent = {
-                            loaded: progressEvent.loaded,
-                            total: progressEvent.total,
-                            percent: (progressEvent.loaded / progressEvent.total) * 100,
+                            loaded: totalProgress,
+                            total: file.size,
+                            percent: (totalProgress / file.size) * 100,
                             uploadId: initResponse.upload_id
                         };
                         options.onProgress!(progress);
                     }
                 }
             });
-        }
-    }
-
-    /**
-     * Handle multipart upload for large files
-     */
-    private async uploadMultipart(
-        file: File | Blob,
-        presignedData: any,
-        uploadId: string,
-        options?: UploadOptions
-    ): Promise<void> {
-        const chunkSize = options?.chunkSize || 5 * 1024 * 1024; // 5MB default
-        const parts = presignedData.parts;
-        let uploadedBytes = 0;
-        const uploadedParts: Array<{part_number: number, etag: string}> = [];
-
-        // Use separate axios instance without auth headers for S3
-        const uploadAxios = axios.create();
-
-        for (const part of parts) {
-            const start = (part.part_number - 1) * chunkSize;
-            const end = Math.min(start + chunkSize, file.size);
-            const chunk = file.slice(start, end);
-
-            const response = await uploadAxios.put(part.presigned_url, chunk, {
-                headers: {
-                    'Content-Type': file.type || 'application/octet-stream',
-                    ...(part.headers || {})
-                },
-                onUploadProgress: (progressEvent: AxiosProgressEvent) => {
-                    if (options?.onProgress) {
-                        const totalUploaded = uploadedBytes + progressEvent.loaded;
-                        const progress: ProgressEvent = {
-                            loaded: totalUploaded,
-                            total: file.size,
-                            percent: (totalUploaded / file.size) * 100,
-                            uploadId: uploadId
-                        };
-                        options.onProgress!(progress);
-                    }
-                }
-            });
-
-            // Store ETag for completion
-            const etag = response.headers['etag'] || response.headers['ETag'];
-            if (etag) {
-                uploadedParts.push({
-                    part_number: part.part_number,
-                    etag: etag.replace(/"/g, '') // Remove quotes from ETag
-                });
+            
+            // Collect ETag for completion
+            const etag = uploadResponse.headers['etag'];
+            if (!etag) {
+                throw new Error(`No ETag received for part ${partNumber}`);
             }
-
-            uploadedBytes += (end - start);
+            
+            parts.push({
+                part_number: partNumber,
+                etag: etag
+            });
+            
+            uploadedBytes += chunk.size;
         }
-
-        // Complete multipart upload if endpoint is provided
-        if (presignedData.complete_multipart_endpoint) {
-            await this.axios.post(
-                `${this.appConfig.getEndpoint()}${presignedData.complete_multipart_endpoint}`,
-                {
-                    upload_id: uploadId,
-                    parts: uploadedParts
-                },
-                {
-                    headers: {
-                        'Authorization': `Bearer ${this.tokenGetter.getToken()}`,
-                        'Content-Type': 'application/json'
-                    }
-                }
-            );
-        }
+        
+        // Complete multipart upload
+        await this.completeMultipartUpload(
+            typeName, resourceId, columnName,
+            initResponse.upload_id,
+            initResponse.s3_upload_id,
+            parts,
+            fileName,
+            file.size
+        );
     }
 
     /**
-     * Complete an upload session
+     * Complete a regular upload session
      */
     private async completeUpload(
         typeName: string,
         resourceId: string,
         columnName: string,
-        fileName: string,
         uploadId: string,
         metadata?: Record<string, any>
     ): Promise<void> {
         await this.axios.post(
-            `${this.appConfig.getEndpoint()}/asset/${typeName}/${resourceId}/${columnName}/upload?operation=complete&upload_id=${uploadId}&filename=${fileName}`,
+            `${this.appConfig.getEndpoint()}/asset/${typeName}/${resourceId}/${columnName}/upload?operation=complete&upload_id=${uploadId}`,
             metadata || {},
             {
                 headers: {
                     'Authorization': `Bearer ${this.tokenGetter.getToken()}`,
                     'Content-Type': 'application/json'
+                }
+            }
+        );
+    }
+
+    /**
+     * Complete a multipart upload session
+     */
+    private async completeMultipartUpload(
+        typeName: string,
+        resourceId: string,
+        columnName: string,
+        uploadId: string,
+        s3UploadId: string,
+        parts: Array<{part_number: number, etag: string}>,
+        fileName: string,
+        fileSize: number
+    ): Promise<void> {
+        await this.axios.post(
+            `${this.appConfig.getEndpoint()}/asset/${typeName}/${resourceId}/${columnName}/upload?operation=complete&upload_id=${uploadId}`,
+            {
+                s3_upload_id: s3UploadId,
+                parts: parts,
+                fileName: fileName,
+                size: fileSize
+            },
+            {
+                headers: {
+                    'Authorization': `Bearer ${this.tokenGetter.getToken()}`,
+                    'Content-Type': 'application/json'
+                }
+            }
+        );
+    }
+
+    /**
+     * Abort a multipart upload
+     */
+    async abortMultipartUpload(
+        typeName: string,
+        resourceId: string,
+        columnName: string,
+        s3UploadId: string,
+        fileName: string
+    ): Promise<void> {
+        await this.axios.delete(
+            `${this.appConfig.getEndpoint()}/asset/${typeName}/${resourceId}/${columnName}/upload?upload_id=${s3UploadId}&filename=${fileName}`,
+            {
+                headers: {
+                    'Authorization': `Bearer ${this.tokenGetter.getToken()}`
                 }
             }
         );
@@ -422,11 +500,11 @@ export class AssetManager {
             session.typeName,
             session.resourceId,
             session.columnName,
-            session.fileName,
             uploadId,
             {
                 size: file.size,
-                type: file.type
+                type: file.type,
+                fileName: session.fileName
             }
         );
 
