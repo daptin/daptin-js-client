@@ -1,6 +1,6 @@
 {
   "name": "daptin-client",
-  "version": "0.7.3",
+  "version": "0.7.4",
   "description": "NodeJS client supporting jsonapi, actions, state machines, configuration and aggregate api for daptin backend",
   "keywords": [
     "daptin",
@@ -10,7 +10,7 @@
   "author": "Parth Mudgal",
   "license": "MIT",
   "dependencies": {
-    "axios": "^1.7.7",
+    "axios": "0.21.1",
     "devour-client": "^2.1.0",
     "global": "^4.4.0",
     "jwt-decode": "^4.0.0",
