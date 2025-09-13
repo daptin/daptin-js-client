@@ -150,7 +150,7 @@ export class WorldManager {
                 if (response.status === 200) {
                     const data = response.data;
                     if (data.Actions.length > 0) {
-                        console.log("Register actions", typeName, data.Actions,);
+                        // console.log("Register actions", typeName, data.Actions,);
                         that.actionManager.addAllActions(data.Actions);
                     }
                     that.stateMachines[typeName] = data.StateMachines;
