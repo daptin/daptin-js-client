@@ -38,4 +38,36 @@ describe('LlmManager request shape', () => {
       data: body
     });
   });
+
+  test('returns diagnostic response metadata from raw helpers', async () => {
+    const axios = jest.fn().mockResolvedValue({
+      status: 200,
+      headers: {'content-type': 'application/json'},
+      data: {object: 'list', data: []}
+    });
+    const llmManager = new LlmManager(appConfig as any, tokenGetter, axios as any);
+
+    await expect(llmManager.listModelsResponse()).resolves.toEqual({
+      status: 200,
+      headers: {'content-type': 'application/json'},
+      data: {object: 'list', data: []}
+    });
+  });
+
+  test('preserves diagnostic error responses from raw helpers', async () => {
+    const axios = jest.fn().mockRejectedValue({
+      response: {
+        status: 502,
+        headers: {'content-type': 'text/html'},
+        data: '<html>bad gateway</html>'
+      }
+    });
+    const llmManager = new LlmManager(appConfig as any, tokenGetter, axios as any);
+
+    await expect(llmManager.createEmbeddingResponse({model: 'test', input: 'hello'})).rejects.toEqual({
+      status: 502,
+      headers: {'content-type': 'text/html'},
+      data: '<html>bad gateway</html>'
+    });
+  });
 });

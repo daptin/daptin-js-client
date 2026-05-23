@@ -77,7 +77,7 @@ Action APIs
 Use `actionManager.doAction(type, actionName, attributes)` to call Daptin actions. For instance-scoped actions, pass the instance reference id in the attributes using the `{type}_id` field expected by Daptin.
 
 ```js
-// Entity-level action
+// Guest actions omit Authorization when no token is available.
 await daptinClient.actionManager.doAction('user_account', 'signin', {
   email: 'user@example.com',
   password: 'password'
@@ -173,6 +173,13 @@ await daptinClient.llmManager.createEmbedding({
   model: 'text-embedding-3-small',
   input: 'Hello'
 });
+
+// Diagnostic variants preserve HTTP response metadata.
+const diagnostic = await daptinClient.llmManager.createChatCompletionResponse({
+  model: 'gpt-4.1-mini',
+  messages: [{role: 'user', content: 'Hello'}]
+});
+console.log(diagnostic.status, diagnostic.headers, diagnostic.data);
 ```
 
 GraphQL APIs
@@ -221,6 +228,24 @@ const json = await daptinClient.feedManager.getJson('updates');
 
 const preview = await daptinClient.feedManager.preview('updates', 'rss');
 console.log(preview.contentType, preview.body);
+```
+
+Live APIs
+==
+
+```js
+const live = daptinClient.liveManager.connect({
+  onMessage: (message) => console.log(message)
+});
+
+await live.createTopic('dashboard-updates');
+await live.subscribe('dashboard-updates');
+await live.publish('dashboard-updates', {message: 'hello'});
+await live.unsubscribe('dashboard-updates');
+await live.destroyTopic('dashboard-updates');
+
+// The manager also delegates to the active connection.
+await daptinClient.liveManager.getTopicPermission('dashboard-updates');
 ```
 
 

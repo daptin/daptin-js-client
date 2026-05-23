@@ -33,6 +33,30 @@ describe('ActionManager request shape', () => {
     });
   });
 
+  test('omits Authorization when token is empty', async () => {
+    const axios = jest.fn().mockResolvedValue({data: []});
+    const emptyTokenGetter = {getToken: jest.fn(() => '')};
+    const actionManager = new ActionManager(appConfig, emptyTokenGetter, axios as any);
+
+    await actionManager.doAction('user_account', 'signup', {
+      email: 'user@example.com'
+    });
+
+    expect(axios.mock.calls[0][0].headers).toEqual({});
+  });
+
+  test('omits Authorization when token is null or undefined', async () => {
+    const axios = jest.fn().mockResolvedValue({data: []});
+    const nullTokenManager = new ActionManager(appConfig, {getToken: () => null} as any, axios as any);
+    const undefinedTokenManager = new ActionManager(appConfig, {getToken: () => undefined} as any, axios as any);
+
+    await nullTokenManager.doAction('user_account', 'signin', {});
+    await undefinedTokenManager.doAction('user_account', 'signin', {});
+
+    expect(axios.mock.calls[0][0].headers).toEqual({});
+    expect(axios.mock.calls[1][0].headers).toEqual({});
+  });
+
   test('keeps instance ids in action attributes instead of query params', async () => {
     const axios = jest.fn().mockResolvedValue({data: [{ResponseType: 'client.notify'}]});
     const actionManager = new ActionManager(appConfig, tokenGetter, axios as any);

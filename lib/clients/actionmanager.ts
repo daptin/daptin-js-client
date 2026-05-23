@@ -73,9 +73,7 @@ export class ActionManager {
             that.axios({
                 url: that.appConfig.endpoint + "/action/" + type + "/" + actionName,
                 method: "POST",
-                headers: {
-                    "Authorization": "Bearer " + that.tokenGetter.getToken()
-                },
+                headers: that.authHeaders(),
                 params: options && options.query ? options.query : undefined,
                 data: {
                     attributes: attributes
@@ -89,6 +87,11 @@ export class ActionManager {
         })
 
     };
+
+    private authHeaders() {
+        const token = this.tokenGetter.getToken();
+        return token ? {"Authorization": "Bearer " + token} : {};
+    }
 
     addAllActions(actions) {
 
