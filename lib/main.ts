@@ -14,6 +14,7 @@ import {LlmManager} from "./clients/llmmanager";
 import {GraphqlManager} from "./clients/graphqlmanager";
 import {YjsManager} from "./clients/yjsmanager";
 import {StateMachineManager} from "./clients/statemachinemanager";
+import {FeedManager} from "./clients/feedmanager";
 
 const JsonApi =  require("devour-client");
 
@@ -41,6 +42,7 @@ export class DaptinClient {
   public graphqlManager: GraphqlManager;
   public yjsManager: YjsManager;
   public stateMachineManager: StateMachineManager;
+  public feedManager: FeedManager;
 
   constructor(endpoint, debug, tokenGetter, axiosConfig  : any) {
     const that = this;
@@ -71,6 +73,7 @@ export class DaptinClient {
     that.graphqlManager = new GraphqlManager(that.appConfig, that.tokenGetter, axiosInstance);
     that.yjsManager = new YjsManager(that.appConfig, that.tokenGetter);
     that.stateMachineManager = new StateMachineManager(that.appConfig, that.tokenGetter, axiosInstance);
+    that.feedManager = new FeedManager(that.appConfig, that.tokenGetter, axiosInstance);
 
     that.jsonApi.insertMiddlewareBefore("HEADER", {
       name: "Auth Header middleware",

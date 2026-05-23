@@ -211,6 +211,18 @@ const transitioned = await daptinClient.stateMachineManager.event(
 );
 ```
 
+Feed APIs
+==
+
+```js
+const rss = await daptinClient.feedManager.getRss('updates');
+const atom = await daptinClient.feedManager.getAtom('updates');
+const json = await daptinClient.feedManager.getJson('updates');
+
+const preview = await daptinClient.feedManager.preview('updates', 'rss');
+console.log(preview.contentType, preview.body);
+```
+
 
 Publish
 ==
