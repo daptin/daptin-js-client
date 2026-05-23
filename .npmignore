@@ -1,1 +1,9 @@
 lib/
+test/
+wiki/
+.claude/
+.idea/
+.github/
+node_modules/
+*.log
+*.tgz

@@ -69,4 +69,21 @@ export class ConfigManager {
       })
     });
   }
+
+  deleteConfig(configName: string, configType: string) {
+    const that = this;
+    return new Promise(function (resolve, reject) {
+      that.axios({
+        url: that.appConfig.endpoint + "/_config/" + configType + "/" + configName,
+        headers: {
+          "Authorization": "Bearer " + that.getToken.getToken()
+        },
+        method: "DELETE"
+      }).then(function (respo) {
+        resolve(respo.data)
+      }, function (rs) {
+        reject(rs)
+      })
+    });
+  }
 }

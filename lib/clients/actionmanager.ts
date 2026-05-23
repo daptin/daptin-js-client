@@ -2,6 +2,11 @@ import {AxiosInstance} from "axios"
 import * as jwt_decode from 'jwt-decode';
 import {AppConfigProvider, TokenGetter} from "./interface";
 
+export interface ActionOptions {
+    query?: {[key: string]: any};
+    referenceId?: string;
+}
+
 export class ActionManager {
 
     appConfig: AppConfigProvider;
@@ -55,9 +60,15 @@ export class ActionManager {
         });
     };
 
-    doAction(type, actionName, data) {
+    doAction(type, actionName, data, options?: ActionOptions) {
         // console.log("invoke action", type, actionName, data);
         const that = this;
+        const attributes = {
+            ...(data || {})
+        };
+        if (options && options.referenceId) {
+            attributes[type + "_id"] = options.referenceId;
+        }
         return new Promise(function (resolve, reject) {
             that.axios({
                 url: that.appConfig.endpoint + "/action/" + type + "/" + actionName,
@@ -65,8 +76,9 @@ export class ActionManager {
                 headers: {
                     "Authorization": "Bearer " + that.tokenGetter.getToken()
                 },
+                params: options && options.query ? options.query : undefined,
                 data: {
-                    attributes: data
+                    attributes: attributes
                 }
             }).then(function (res) {
                 resolve(res.data);

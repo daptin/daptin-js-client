@@ -257,8 +257,8 @@ export class WorldManager {
                         resolve(res);
                     }).catch(reject);
 
-                });
-            });
+                }, reject);
+            }).catch(reject);
         });
     }
 
@@ -315,7 +315,7 @@ export class WorldManager {
                 })).then(function () {
                     resolve(res);
                 }).catch(reject);
-            })
+            }, reject)
 
         })
 
@@ -323,7 +323,7 @@ export class WorldManager {
 
     loadModels(force: boolean) {
         const that = this;
-        return new Promise(async function (resolve, reject) {
+        return (async function () {
             if (force) {
                 that.worlds = {};
             }
@@ -336,10 +336,9 @@ export class WorldManager {
             const worldDef = await that.modelLoader("world", force);
             that.systemActions = worldDef.Actions;
             that.jsonApi.define("world", that.GetJsonApiModel(worldDef.ColumnModel));
-            that.refreshWorlds(force).then(function () {
-                resolve(that.worlds);
-            }).catch(reject);
-        });
+            await that.refreshWorlds(force);
+            return that.worlds;
+        })();
     }
 }
 
