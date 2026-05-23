@@ -2,3 +2,5 @@ dist
 node_modules/
 *.iml
 .idea/
+.claude/
+wiki/
