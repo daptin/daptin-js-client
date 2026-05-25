@@ -16,6 +16,7 @@ import {YjsManager} from "./clients/yjsmanager";
 import {StateMachineManager} from "./clients/statemachinemanager";
 import {FeedManager} from "./clients/feedmanager";
 import {LiveManager} from "./clients/livemanager";
+import {RelationshipManager} from "./clients/relationshipmanager";
 
 const JsonApi =  require("devour-client");
 
@@ -45,6 +46,7 @@ export class DaptinClient {
   public stateMachineManager: StateMachineManager;
   public feedManager: FeedManager;
   public liveManager: LiveManager;
+  public relationshipManager: RelationshipManager;
 
   constructor(endpoint, debug, tokenGetter, axiosConfig  : any) {
     const that = this;
@@ -77,6 +79,7 @@ export class DaptinClient {
     that.stateMachineManager = new StateMachineManager(that.appConfig, that.tokenGetter, axiosInstance);
     that.feedManager = new FeedManager(that.appConfig, that.tokenGetter, axiosInstance);
     that.liveManager = new LiveManager(that.appConfig, that.tokenGetter);
+    that.relationshipManager = new RelationshipManager(that.appConfig, that.tokenGetter, axiosInstance);
 
     that.jsonApi.insertMiddlewareBefore("HEADER", {
       name: "Auth Header middleware",

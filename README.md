@@ -124,6 +124,59 @@ await daptinClient.configManager.getConfig('theme', 'ui');
 await daptinClient.configManager.deleteConfig('theme', 'ui');
 ```
 
+Relationship APIs
+==
+
+Daptin relationship helpers use relation/FK keys such as `credential_id`, `usergroup_id`, `cloud_store_id`, and `mail_server_id`. Pass those keys directly; do not pass join-table names or display labels.
+
+```js
+// Fetch related records with GET /api/{entity}/{reference_id}/{relation_key}
+const groups = await daptinClient.relationshipManager.fetch(
+  'user_account',
+  userId,
+  'usergroup_id',
+  {'page[size]': 10}
+);
+
+// Link a single relation with PATCH /api/{entity}/{reference_id}
+await daptinClient.relationshipManager.set(
+  'cloud_store',
+  storeId,
+  'credential_id',
+  {type: 'credential', id: credentialId}
+);
+
+// Clear using the JSON:API null relationship payload. Verify the target
+// relation supports clearing in your Daptin schema.
+await daptinClient.relationshipManager.clear(
+  'cloud_store',
+  storeId,
+  'credential_id'
+);
+
+// Replace a multi-value relation.
+await daptinClient.relationshipManager.setMany(
+  'user_account',
+  userId,
+  'usergroup_id',
+  [
+    {type: 'usergroup', id: groupId},
+    {type: 'usergroup', id: anotherGroupId}
+  ]
+);
+
+// Remove one multi-value relation target.
+await daptinClient.relationshipManager.remove(
+  'user_account',
+  userId,
+  'usergroup_id',
+  {type: 'usergroup', id: groupId}
+);
+
+// Relation endpoint responses can include Daptin relation metadata.
+const targetId = groups.data[0].attributes.relation_reference_id;
+```
+
 Integration APIs
 ==
 

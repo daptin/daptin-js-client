@@ -1,9 +1,12 @@
 lib/
 test/
 wiki/
+GOAL.md
 .claude/
 .idea/
 .github/
 node_modules/
 *.log
 *.tgz
+*.db
+schema_uploaded_*

@@ -1,6 +1,6 @@
 {
   "name": "daptin-client",
-  "version": "0.7.8",
+  "version": "0.7.9",
   "description": "NodeJS client supporting jsonapi, actions, state machines, configuration and aggregate api for daptin backend",
   "keywords": [
     "daptin",
@@ -32,11 +32,11 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/daptin/daptin-client-js.git"
+    "url": "git+https://github.com/daptin/daptin-js-client.git"
   },
   "jsdelivr": "dist/src/main.js",
   "bugs": {
-    "url": "https://github.com/daptin/daptin-client-js/issues"
+    "url": "https://github.com/daptin/daptin-js-client/issues"
   },
   "main": "dist/main.js",
   "types": "dist/main.d.ts",
@@ -61,5 +61,5 @@
       "/node_modules/(?!.*\\.mjs$)"
     ]
   },
-  "homepage": "https://github.com/daptin/daptin-client-js#readme"
+  "homepage": "https://github.com/daptin/daptin-js-client#readme"
 }
