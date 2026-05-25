@@ -5,6 +5,58 @@
 import axios, {AxiosInstance, Method} from "axios"
 import {AppConfigProvider, TokenGetter} from "./interface";
 
+export type AssetUrlQueryValue = string | number | boolean | null | undefined;
+
+export interface DaptinImageProcessingOptions {
+    boxblur?: number | string;
+    gaussianblur?: number | string;
+    gaussianBlur?: number | string;
+    dilate?: number | string;
+    edgedetection?: boolean | string;
+    erode?: number | string;
+    emboss?: boolean | string;
+    median?: number | string;
+    sharpen?: number | string;
+    brightness?: number | string;
+    colorBalance?: string;
+    colorize?: string;
+    colorspaceLinearToSRGB?: boolean | string;
+    colorspaceSRGBToLinear?: boolean | string;
+    contrast?: number | string;
+    crop?: string;
+    cropToSize?: string;
+    flipHorizontal?: boolean | string;
+    flipVertical?: boolean | string;
+    gamma?: number | string;
+    grayscale?: boolean | string;
+    hue?: number | string;
+    invert?: boolean | string;
+    resize?: string;
+    rotate?: number | string;
+    rotate90?: boolean | string;
+    rotate180?: boolean | string;
+    rotate270?: boolean | string;
+    saturation?: number | string;
+    sepia?: number | string;
+    sobel?: boolean | string;
+    threshold?: number | string;
+    transpose?: boolean | string;
+    transverse?: boolean | string;
+    [key: string]: AssetUrlQueryValue;
+}
+
+export interface DaptinAssetUrlOptions {
+    entity: string;
+    referenceId: string;
+    columnName: string;
+    file?: string;
+    filename?: string;
+    index?: number;
+    processImage?: boolean;
+    imageOptions?: DaptinImageProcessingOptions;
+    query?: Record<string, AssetUrlQueryValue>;
+}
+
 export interface UploadOptions {
     onProgress?: (progress: ProgressEvent) => void;
     chunkSize?: number;
@@ -56,8 +108,59 @@ export class AssetManager {
     /**
      * Get asset URL for downloading/viewing
      */
-    getAssetUrl(typeName: string, resourceId: string, columnName: string, fileName: string): string {
-        return `${this.appConfig.getEndpoint()}/asset/${typeName}/${resourceId}/${columnName}?filename=${fileName}`;
+    getAssetUrl(typeName: string, resourceId: string, columnName: string, fileName: string): string;
+    getAssetUrl(options: DaptinAssetUrlOptions): string;
+    getAssetUrl(typeNameOrOptions: string | DaptinAssetUrlOptions, resourceId?: string, columnName?: string, fileName?: string): string {
+        if (typeof typeNameOrOptions === "string") {
+            return `${this.appConfig.getEndpoint()}/asset/${typeNameOrOptions}/${resourceId}/${columnName}?filename=${fileName}`;
+        }
+        return this.buildAssetUrl(typeNameOrOptions);
+    }
+
+    getAssetDisplayUrl(options: DaptinAssetUrlOptions): string {
+        return this.buildAssetUrl(options);
+    }
+
+    getAssetDownloadUrl(options: DaptinAssetUrlOptions): string {
+        return this.buildAssetUrl(options);
+    }
+
+    private buildAssetUrl(options: DaptinAssetUrlOptions): string {
+        const url = [
+            this.appConfig.getEndpoint(),
+            "asset",
+            encodeURIComponent(options.entity),
+            encodeURIComponent(options.referenceId),
+            encodeURIComponent(options.columnName)
+        ].join("/");
+        const query = new URLSearchParams();
+
+        if (options.file !== undefined || options.filename !== undefined) {
+            query.set("file", options.file !== undefined ? options.file : options.filename);
+        }
+        if (typeof options.index === "number") {
+            query.set("index", String(options.index));
+        }
+        if (options.processImage) {
+            query.set("processImage", "true");
+        }
+        this.appendQuery(query, options.imageOptions);
+        this.appendQuery(query, options.query);
+
+        const queryString = query.toString();
+        return queryString ? `${url}?${queryString}` : url;
+    }
+
+    private appendQuery(query: URLSearchParams, values?: Record<string, AssetUrlQueryValue>) {
+        if (!values) {
+            return;
+        }
+        Object.keys(values).forEach(function (key) {
+            const value = values[key];
+            if (value !== undefined && value !== null) {
+                query.set(key, String(value));
+            }
+        });
     }
 
     /**

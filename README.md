@@ -154,6 +154,72 @@ await daptinClient.actionManager.doAction('site', 'list_files', {
 });
 ```
 
+Asset URLs
+==
+
+Asset columns are the fronting API for files stored behind a `cloud_store`. The
+options-object URL helper uses Daptin's asset route query names (`file`, `index`,
+and `processImage`) and URL-encodes path/query values.
+
+```ts
+const displayUrl = daptinClient.assetManager.getAssetUrl({
+  entity: 'gallery_image',
+  referenceId: imageId,
+  columnName: 'photo',
+  file: 'hero.png'
+});
+
+const processedUrl = daptinClient.assetManager.getAssetDisplayUrl({
+  entity: 'gallery_image',
+  referenceId: imageId,
+  columnName: 'photo',
+  index: 0,
+  processImage: true,
+  imageOptions: {
+    resize: '320x320',
+    grayscale: true
+  }
+});
+```
+
+The existing positional call remains available for compatibility:
+
+```ts
+daptinClient.assetManager.getAssetUrl('gallery_image', imageId, 'photo', 'hero.png');
+```
+
+Storage And Site File APIs
+==
+
+`cloud_store` is backing storage. User-facing file access is normally fronted by
+asset columns or sites. The SDK exposes typed wrappers only for Daptin actions
+that exist on the server.
+
+```ts
+await daptinClient.storageManager.cloudStore.createFolder(cloudStoreId, {
+  path: '',
+  name: 'uploads'
+});
+
+await daptinClient.storageManager.cloudStore.uploadFile(cloudStoreId, {
+  path: 'uploads',
+  file: {
+    name: 'hello.txt',
+    file: 'SGVsbG8=',
+    type: 'text/plain'
+  }
+});
+
+await daptinClient.storageManager.site.syncStorage(siteId, {path: ''});
+const files = await daptinClient.storageManager.site.listFiles(siteId, {path: '/'});
+const file = await daptinClient.storageManager.site.getFile(siteId, {path: 'index.html'});
+await daptinClient.storageManager.site.deleteFile(siteId, {path: 'old.html'});
+```
+
+There is intentionally no `site.uploadFile` helper. Daptin does not expose a
+first-class `site/upload_file` action; upload through an asset column or through
+a cloud-store-backed workflow, then sync the site storage.
+
 Config APIs
 ==
 

@@ -17,6 +17,7 @@ import {StateMachineManager} from "./clients/statemachinemanager";
 import {FeedManager} from "./clients/feedmanager";
 import {LiveManager} from "./clients/livemanager";
 import {RelationshipManager} from "./clients/relationshipmanager";
+import {StorageManager} from "./clients/storagemanager";
 import type {DaptinJsonApiClientLike} from "./types/jsonapi";
 
 export type * from "./types/action";
@@ -24,6 +25,23 @@ export type * from "./types/entity";
 export type * from "./types/jsonapi";
 export type * from "./types/schema";
 export type * from "./types/system";
+export type {
+  AssetUrlQueryValue,
+  DaptinAssetUrlOptions,
+  DaptinImageProcessingOptions
+} from "./clients/assetmanager";
+export type {
+  CloudStoreCreateFolderOptions,
+  CloudStoreCreateSiteOptions,
+  CloudStoreDeletePathOptions,
+  CloudStoreMovePathOptions,
+  CloudStoreUploadFileOptions,
+  DaptinActionFileInput,
+  DaptinSiteFileGetAttributes,
+  DaptinSiteFileListAttributes,
+  SitePathOptions,
+  SiteSyncStorageOptions
+} from "./clients/storagemanager";
 
 const JsonApi =  require("devour-client");
 
@@ -54,6 +72,7 @@ export class DaptinClient {
   public feedManager: FeedManager;
   public liveManager: LiveManager;
   public relationshipManager: RelationshipManager;
+  public storageManager: StorageManager;
 
   constructor(endpoint, debug, tokenGetter, axiosConfig  : any) {
     const that = this;
@@ -87,6 +106,7 @@ export class DaptinClient {
     that.feedManager = new FeedManager(that.appConfig, that.tokenGetter, axiosInstance);
     that.liveManager = new LiveManager(that.appConfig, that.tokenGetter);
     that.relationshipManager = new RelationshipManager(that.appConfig, that.tokenGetter, axiosInstance);
+    that.storageManager = new StorageManager(that.actionManager);
 
     that.jsonApi.insertMiddlewareBefore("HEADER", {
       name: "Auth Header middleware",
