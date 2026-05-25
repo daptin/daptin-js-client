@@ -1,6 +1,6 @@
 {
   "name": "daptin-client",
-  "version": "0.7.11",
+  "version": "0.7.12",
   "description": "NodeJS client supporting jsonapi, actions, state machines, configuration and aggregate api for daptin backend",
   "keywords": [
     "daptin",

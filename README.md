@@ -282,6 +282,78 @@ await daptinClient.relationshipManager.remove(
 const targetId = groups.data[0].attributes.relation_reference_id;
 ```
 
+Access And Permission APIs
+==
+
+`accessManager` owns Daptin object/usergroup access workflows and permission
+bit semantics. Apps should pass entity names and reference ids; they should not
+construct generated join-table names.
+
+```ts
+import {
+  DaptinPermissionFlags,
+  addPermission,
+  hasPermission
+} from 'daptin-client';
+
+const canGroupRead = hasPermission(
+  DaptinPermissionFlags.GroupRead | DaptinPermissionFlags.GroupUpdate,
+  DaptinPermissionFlags.GroupRead
+);
+
+const readWrite = addPermission(
+  DaptinPermissionFlags.GroupRead,
+  DaptinPermissionFlags.GroupUpdate
+);
+```
+
+Object usergroup rows expose both ids used by Daptin:
+
+- `relationReferenceId`: the generated relation row id. This is the row patched
+  when changing a group's permission on an object.
+- `groupReferenceId`: the target `usergroup` row id.
+
+```ts
+await daptinClient.accessManager.addObjectUsergroup(
+  'template',
+  templateId,
+  groupId
+);
+
+const access = await daptinClient.accessManager.listObjectUsergroups(
+  'template',
+  templateId,
+  {'page[size]': 10, 'page[number]': 1}
+);
+
+const row = access.data[0];
+console.log(row.group.name, row.groupReferenceId, row.relationReferenceId, row.permission);
+
+await daptinClient.accessManager.updateObjectUsergroupPermission(
+  'template',
+  templateId,
+  groupId,
+  DaptinPermissionFlags.GroupRead
+);
+
+await daptinClient.accessManager.removeObjectUsergroup(
+  'template',
+  templateId,
+  groupId
+);
+```
+
+If you already have the relation row id from `listObjectUsergroups`, you can
+patch it directly without another lookup:
+
+```ts
+await daptinClient.accessManager.updateObjectUsergroupRelationPermission(
+  'template',
+  row.relationReferenceId,
+  DaptinPermissionFlags.GroupUpdate
+);
+```
+
 Integration APIs
 ==
 

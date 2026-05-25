@@ -18,6 +18,7 @@ import {FeedManager} from "./clients/feedmanager";
 import {LiveManager} from "./clients/livemanager";
 import {RelationshipManager} from "./clients/relationshipmanager";
 import {StorageManager} from "./clients/storagemanager";
+import {AccessManager} from "./clients/accessmanager";
 import type {DaptinJsonApiClientLike} from "./types/jsonapi";
 
 export type * from "./types/action";
@@ -25,6 +26,29 @@ export type * from "./types/entity";
 export type * from "./types/jsonapi";
 export type * from "./types/schema";
 export type * from "./types/system";
+export {
+  AccessManager,
+  addPermission,
+  decodePermission,
+  DaptinPermissionByScope,
+  DaptinPermissionFlags,
+  DaptinPermissionSets,
+  hasPermission,
+  permissionValue,
+  removePermission,
+  summarizePermission
+} from "./clients/accessmanager";
+export type {
+  DaptinObjectUsergroupAccess,
+  DaptinObjectUsergroupAccessResponse,
+  DaptinObjectUsergroupUpdateOptions,
+  DaptinPermissionAction,
+  DaptinPermissionGrant,
+  DaptinPermissionInput,
+  DaptinPermissionMatrix,
+  DaptinPermissionScope,
+  DaptinRelatedUsergroupAttributes
+} from "./clients/accessmanager";
 export type {
   AssetUrlQueryValue,
   DaptinAssetUrlOptions,
@@ -73,6 +97,7 @@ export class DaptinClient {
   public liveManager: LiveManager;
   public relationshipManager: RelationshipManager;
   public storageManager: StorageManager;
+  public accessManager: AccessManager;
 
   constructor(endpoint, debug, tokenGetter, axiosConfig  : any) {
     const that = this;
@@ -107,6 +132,7 @@ export class DaptinClient {
     that.liveManager = new LiveManager(that.appConfig, that.tokenGetter);
     that.relationshipManager = new RelationshipManager(that.appConfig, that.tokenGetter, axiosInstance);
     that.storageManager = new StorageManager(that.actionManager);
+    that.accessManager = new AccessManager(that.appConfig, that.tokenGetter, axiosInstance);
 
     that.jsonApi.insertMiddlewareBefore("HEADER", {
       name: "Auth Header middleware",
