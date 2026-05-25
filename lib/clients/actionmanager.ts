@@ -1,6 +1,8 @@
 import {AxiosInstance} from "axios"
 import * as jwt_decode from 'jwt-decode';
 import {AppConfigProvider, TokenGetter} from "./interface";
+import type {DaptinActionDefinition} from "../types/schema";
+import type {DaptinActionResponse} from "../types/action";
 
 export interface ActionOptions {
     query?: {[key: string]: any};
@@ -11,7 +13,7 @@ export class ActionManager {
 
     appConfig: AppConfigProvider;
     tokenGetter: TokenGetter;
-    actionMap: any;
+    actionMap: Record<string, Record<string, DaptinActionDefinition>>;
     private axios: AxiosInstance;
 
     constructor(appConfig, getToken, axiosInstance) {
@@ -41,7 +43,7 @@ export class ActionManager {
         window.URL.revokeObjectURL(url);
     };
 
-    setActions(typeName, actions) {
+    setActions(typeName: string, actions: Record<string, DaptinActionDefinition>) {
         this.actionMap[typeName] = actions;
     };
 
@@ -60,7 +62,7 @@ export class ActionManager {
         });
     };
 
-    doAction(type, actionName, data, options?: ActionOptions) {
+    doAction<TAttributes = Record<string, unknown>>(type: string, actionName: string, data: Record<string, unknown>, options?: ActionOptions): Promise<DaptinActionResponse<TAttributes>> {
         // console.log("invoke action", type, actionName, data);
         const that = this;
         const attributes = {
@@ -69,7 +71,7 @@ export class ActionManager {
         if (options && options.referenceId) {
             attributes[type + "_id"] = options.referenceId;
         }
-        return new Promise(function (resolve, reject) {
+        return new Promise<DaptinActionResponse<TAttributes>>(function (resolve, reject) {
             that.axios({
                 url: that.appConfig.endpoint + "/action/" + type + "/" + actionName,
                 method: "POST",
@@ -79,7 +81,7 @@ export class ActionManager {
                     attributes: attributes
                 }
             }).then(function (res) {
-                resolve(res.data);
+                resolve(res.data as DaptinActionResponse<TAttributes>);
             }, function (res) {
                 reject(res);
             })
@@ -93,7 +95,7 @@ export class ActionManager {
         return token ? {"Authorization": "Bearer " + token} : {};
     }
 
-    addAllActions(actions) {
+    addAllActions(actions: DaptinActionDefinition[]) {
 
         for (let i = 0; i < actions.length; i++) {
             const action = actions[i];
@@ -107,11 +109,14 @@ export class ActionManager {
         }
     };
 
-    getActions(typeName) {
+    getActions(typeName: string): Record<string, DaptinActionDefinition> | undefined {
         return this.actionMap[typeName];
     };
 
-    getActionModel(typeName, actionName) {
+    getActionModel(typeName: string, actionName: string): DaptinActionDefinition | undefined {
+        if (!this.actionMap[typeName]) {
+            return undefined;
+        }
         return this.actionMap[typeName][actionName];
     };
 

@@ -17,6 +17,13 @@ import {StateMachineManager} from "./clients/statemachinemanager";
 import {FeedManager} from "./clients/feedmanager";
 import {LiveManager} from "./clients/livemanager";
 import {RelationshipManager} from "./clients/relationshipmanager";
+import type {DaptinJsonApiClientLike} from "./types/jsonapi";
+
+export type * from "./types/action";
+export type * from "./types/entity";
+export type * from "./types/jsonapi";
+export type * from "./types/schema";
+export type * from "./types/system";
 
 const JsonApi =  require("devour-client");
 
@@ -29,7 +36,7 @@ class LocalStorageTokenGetter {
 export class DaptinClient {
 
   public appConfig: AppConfig;
-  public jsonApi: any;
+  public jsonApi: DaptinJsonApiClientLike;
   public tokenGetter: TokenGetter;
   public actionManager: ActionManager;
   public worldManager: WorldManager;
@@ -60,7 +67,7 @@ export class DaptinClient {
       pluralize: false,
       logger: debug,
       ...axiosConfig
-    });
+    }) as DaptinJsonApiClientLike;
     that.jsonApi.axios = axiosInstance;
 
     that.tokenGetter = tokenGetter || new LocalStorageTokenGetter();

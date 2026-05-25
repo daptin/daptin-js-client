@@ -4,35 +4,26 @@
 import {AxiosInstance, AxiosResponse} from "axios"
 import {AppConfigProvider, TokenGetter} from "./interface";
 import ActionManager from "./actionmanager";
-
-class Column {
-    ColumnName: string;
-    ColumnType: string;
-    Name: string;
-    DataType: string;
-    IsIndexed: boolean;
-    IsUnique: boolean;
-    IsForeignKey: boolean;
-    IsNullable: boolean;
-    ForeignKey
-}
-
-class Table {
-    TableName: string;
-    Columns: Array<Column>;
-}
+import type {
+    DaptinActionDefinition,
+    DaptinColumnModelEntry,
+    DaptinColumnTypeDefinition,
+    DaptinModelDefinition,
+    DaptinStateMachineDefinition
+} from "../types/schema";
+import type {DaptinWorldEntity} from "../types/system";
 
 export class WorldManager {
-    columnKeysCache: any;
-    stateMachines: any;
-    stateMachineEnabled: any;
-    streams: any;
+    columnKeysCache: Record<string, DaptinModelDefinition>;
+    stateMachines: Record<string, DaptinStateMachineDefinition[]>;
+    stateMachineEnabled: Record<string, boolean>;
+    streams: any[];
     appConfig: AppConfigProvider;
     jsonApi: any;
     actionManager: ActionManager;
-    columnTypes: any;
-    worlds: Object;
-    systemActions: any;
+    columnTypes: DaptinColumnTypeDefinition[];
+    worlds: Record<string, DaptinWorldEntity>;
+    systemActions: DaptinActionDefinition[];
     tokenGetter: TokenGetter;
     private axios: AxiosInstance;
 
@@ -45,12 +36,12 @@ export class WorldManager {
         this.columnKeysCache = {};
         this.stateMachineEnabled = {};
         this.stateMachines = {};
-        this.systemActions = {};
+        this.systemActions = [];
         this.worlds = {};
-        this.columnTypes = {};
+        this.columnTypes = [];
     }
 
-    modelLoader(typeName: string, force: boolean): Promise<any> {
+    modelLoader(typeName: string, force: boolean): Promise<DaptinModelDefinition> {
         const that = this;
         return new Promise(function (resolve, reject) {
             return that.getColumnKeys(typeName, force).then(resolve).catch(reject)
@@ -68,7 +59,7 @@ export class WorldManager {
                 }
             }).then(function (r: AxiosResponse<string>) {
                 if (r.status === 200) {
-                    that.columnTypes = r.data;
+                    that.columnTypes = r.data as unknown as DaptinColumnTypeDefinition[];
                     resolve(r.data);
                 } else {
                     reject(r.data)
@@ -87,7 +78,7 @@ export class WorldManager {
     }
 
 
-    getStateMachinesForType(typeName) {
+    getStateMachinesForType(typeName: string): Promise<DaptinStateMachineDefinition[] | undefined> {
         const that = this;
         return new Promise(function (resolve, reject) {
             resolve(that.stateMachines[typeName]);
@@ -133,7 +124,7 @@ export class WorldManager {
         })
     };
 
-    getColumnKeys(typeName: string, force: boolean): Promise<any> {
+    getColumnKeys(typeName: string, force: boolean): Promise<DaptinModelDefinition> {
         const that = this;
         return new Promise(function (resolve, reject) {
 
@@ -148,7 +139,7 @@ export class WorldManager {
                 },
             }).then(function (response: AxiosResponse) {
                 if (response.status === 200) {
-                    const data = response.data;
+                    const data = response.data as DaptinModelDefinition;
                     if (data.Actions.length > 0) {
                         // console.log("Register actions", typeName, data.Actions,);
                         that.actionManager.addAllActions(data.Actions);
@@ -168,20 +159,20 @@ export class WorldManager {
 
     };
 
-    getColumnFieldTypes() {
+    getColumnFieldTypes(): DaptinColumnTypeDefinition[] {
         const that = this;
         return that.columnTypes;
     }
 
-    isStateMachineEnabled(typeName) {
+    isStateMachineEnabled(typeName: string): boolean {
         const that = this;
         return that.stateMachineEnabled[typeName] === true;
     };
 
 
-    GetJsonApiModel(columnModel) {
+    GetJsonApiModel(columnModel: Record<string, DaptinColumnModelEntry>): Record<string, unknown> {
         const that = this;
-        const model = {};
+        const model: Record<string, unknown> = {};
         if (!columnModel) {
             return model;
         }
@@ -202,18 +193,18 @@ export class WorldManager {
         return model;
     };
 
-    getWorlds() {
+    getWorlds(): Record<string, DaptinWorldEntity> {
         const that = this;
         return that.worlds;
     };
 
-    getWorldByName(name) {
+    getWorldByName(name: string): DaptinWorldEntity | undefined {
         const that = this;
         return that.worlds[name]
     };
 
 
-    getSystemActions() {
+    getSystemActions(): DaptinActionDefinition[] {
         const that = this;
         return that.systemActions;
     }

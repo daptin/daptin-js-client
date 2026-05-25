@@ -71,6 +71,45 @@ daptinClient.worldManager.loadModels().then(function () {
 
 ```
 
+TypeScript APIs
+==
+
+The package exports reusable Daptin entity, JSON:API, schema, action, and system-table contracts. Custom app rows can extend `DaptinEntity<T>`, while built-in Daptin tables have named interfaces.
+
+```ts
+import type {
+  DaptinActionResponse,
+  DaptinCloudStoreEntity,
+  DaptinEntity,
+  DaptinSiteEntity,
+  DaptinTableInfo,
+  DaptinWorldEntity
+} from 'daptin-client';
+
+interface ProductFields {
+  name: string;
+  photo?: Array<{name?: string; path?: string; type?: string}>;
+}
+
+type Product = DaptinEntity<ProductFields>;
+
+const products = await daptinClient.jsonApi.findAll<ProductFields>('product');
+const firstProduct = products.data[0] as Product;
+const productName = firstProduct.name;
+
+const worlds: Record<string, DaptinWorldEntity> = daptinClient.worldManager.getWorlds();
+const site: DaptinSiteEntity | undefined = undefined;
+const cloudStore: DaptinCloudStoreEntity | undefined = undefined;
+
+const response: DaptinActionResponse = await daptinClient.actionManager.doAction(
+  'user_account',
+  'signin',
+  {email: 'user@example.com', password: 'password'}
+);
+
+const tableInfo: DaptinTableInfo | undefined = undefined;
+```
+
 Action APIs
 ==
 
