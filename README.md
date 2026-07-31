@@ -465,7 +465,9 @@ Live APIs
 
 ```js
 const live = daptinClient.liveManager.connect({
-  onMessage: (message) => console.log(message)
+  onMessage: (message) => console.log(message),
+  // Use null to wait until a response or socket close/error with no elapsed-time deadline.
+  timeoutMs: null
 });
 
 await live.createTopic('dashboard-updates');

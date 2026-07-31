@@ -7,7 +7,7 @@ export interface LiveConnectOptions {
   onMessage?: (message: LiveMessage) => void;
   onError?: (event: Event) => void;
   onClose?: (event: CloseEvent) => void;
-  timeoutMs?: number;
+  timeoutMs?: number | null;
 }
 
 export interface LiveMessage {
@@ -24,18 +24,28 @@ export interface LiveMessage {
 }
 
 export interface LiveRequestOptions {
-  timeoutMs?: number;
+  timeoutMs?: number | null;
+}
+
+type LiveTimeout = number | null;
+
+interface PendingLiveRequest {
+  resolve: (message: LiveMessage) => void;
+  reject: (message: LiveMessage | Error) => void;
+  timer?: ReturnType<typeof setTimeout>;
 }
 
 export class LiveConnection {
   socket: WebSocket;
   private openPromise: Promise<void>;
-  private pending: {[id: string]: {resolve: (message: LiveMessage) => void; reject: (message: LiveMessage | Error) => void; timer: any}} = {};
-  private defaultTimeoutMs: number;
+  private pending: {[id: string]: PendingLiveRequest} = {};
+  private defaultTimeoutMs: LiveTimeout;
 
   constructor(socket: WebSocket, options: LiveConnectOptions = {}) {
     this.socket = socket;
-    this.defaultTimeoutMs = options.timeoutMs || 5000;
+    this.defaultTimeoutMs = this.validateTimeout(
+      options.timeoutMs === undefined ? 5000 : options.timeoutMs
+    );
 
     this.openPromise = new Promise((resolve, reject) => {
       const previousOpen = socket.onopen;
@@ -56,7 +66,9 @@ export class LiveConnection {
         if (options.onError) {
           options.onError(event);
         }
-        reject(new Error("Failed to connect to /live"));
+        const error = new Error("Connection to /live failed");
+        reject(error);
+        this.rejectPending(error);
       };
     });
 
@@ -87,21 +99,34 @@ export class LiveConnection {
 
   request(method: string, attributes: {[key: string]: any}, options: LiveRequestOptions = {}): Promise<LiveMessage> {
     const id = this.nextId();
-    const timeoutMs = options.timeoutMs || this.defaultTimeoutMs;
+    const timeoutMs = this.validateTimeout(
+      options.timeoutMs === undefined ? this.defaultTimeoutMs : options.timeoutMs
+    );
     const socket = this.socket;
 
     return this.openPromise.then(() => {
       return new Promise<LiveMessage>((resolve, reject) => {
-        const timer = setTimeout(() => {
+        const pending: PendingLiveRequest = {resolve, reject};
+        if (timeoutMs !== null) {
+          pending.timer = setTimeout(() => {
+            delete this.pending[id];
+            reject(new Error("Timed out waiting for /live response"));
+          }, timeoutMs);
+        }
+        this.pending[id] = pending;
+        try {
+          socket.send(JSON.stringify({
+            id: id,
+            method: method,
+            attributes: attributes
+          }));
+        } catch (error) {
+          if (pending.timer !== undefined) {
+            clearTimeout(pending.timer);
+          }
           delete this.pending[id];
-          reject(new Error("Timed out waiting for /live response"));
-        }, timeoutMs);
-        this.pending[id] = {resolve, reject, timer};
-        socket.send(JSON.stringify({
-          id: id,
-          method: method,
-          attributes: attributes
-        }));
+          reject(error instanceof Error ? error : new Error(String(error)));
+        }
       });
     });
   }
@@ -206,10 +231,22 @@ export class LiveConnection {
   private rejectPending(error: Error) {
     Object.keys(this.pending).forEach((id) => {
       const pending = this.pending[id];
-      clearTimeout(pending.timer);
+      if (pending.timer !== undefined) {
+        clearTimeout(pending.timer);
+      }
       pending.reject(error);
       delete this.pending[id];
     });
+  }
+
+  private validateTimeout(timeoutMs: LiveTimeout): LiveTimeout {
+    if (timeoutMs === null) {
+      return null;
+    }
+    if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) {
+      throw new RangeError("timeoutMs must be a positive finite number or null");
+    }
+    return timeoutMs;
   }
 
   private nextId() {
